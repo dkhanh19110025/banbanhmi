@@ -7,7 +7,18 @@ import { Humanoid } from './Humanoid';
 export type CarryKind = 'menu' | 'cat';
 
 const KNOCKBACK_DECAY = 6;
-const STUN_SPIN_SPEED = 18;
+
+/** Bị tát: ngã (falling) → nằm (lying) → đứng dậy (gettingUp). Chỉ khi xong hết mới đi được. */
+type FallPhase = 'none' | 'falling' | 'lying' | 'gettingUp';
+
+export interface FallTiming {
+  fallSec: number;
+  lieSec: number;
+  getUpSec: number;
+}
+
+const easeIn = (t: number): number => t * t;
+const easeInOut = (t: number): number => t * t * (3 - 2 * t);
 
 export class Player {
   readonly body = new Humanoid({
@@ -33,7 +44,11 @@ export class Player {
   private readonly heldBread = new Map<DishId, THREE.Group>();
   private readonly menuMesh: THREE.Mesh;
   private readonly knockback = new THREE.Vector3();
-  private stunTime = 0;
+  private fallPhase: FallPhase = 'none';
+  private fallTimer = 0;
+  private fallAmt = 0;
+  private fallClock = 0;
+  private fallTiming: FallTiming = { fallSec: 0.3, lieSec: 1.5, getUpSec: 0.8 };
   private targetAngle = 0;
 
   constructor() {
@@ -68,8 +83,14 @@ export class Player {
     return this.body.group.position;
   }
 
+  /** Đang ngã / nằm / đứng dậy: không điều khiển được */
   get isStunned(): boolean {
-    return this.stunTime > 0;
+    return this.fallPhase !== 'none';
+  }
+
+  /** 0 = đứng thẳng, 1 = nằm bẹp (camera dùng để hạ tầm nhìn) */
+  get fallAmount(): number {
+    return this.fallAmt;
   }
 
   reset(spawn: THREE.Vector3): void {
@@ -77,7 +98,9 @@ export class Player {
     this.targetAngle = Math.PI;
     this.group.rotation.y = Math.PI;
     this.knockback.set(0, 0, 0);
-    this.stunTime = 0;
+    this.fallPhase = 'none';
+    this.fallAmt = 0;
+    this.body.setFallPose(0, 0);
     this.idleTime = 0;
     this.setHeld(null);
     this.setCarrying(null);
@@ -110,11 +133,53 @@ export class Player {
     for (const arm of this.body.arms) arm.rotation.x = full ? -1.3 : 0;
   }
 
-  /** Bị tát: văng theo hướng (dx, dz) và choáng */
-  hit(dx: number, dz: number, speed: number, stunSec: number): void {
+  /** Bị tát: quay mặt về phía người tát rồi bị hất văng theo hướng (dx, dz), ngã ngửa */
+  hit(dx: number, dz: number, speed: number, timing: FallTiming): void {
+    // Bị tát lúc đang nằm thì nằm thêm; đang đứng dậy thì ngã lại
+    if (this.fallPhase === 'lying') {
+      this.fallTimer = 0;
+      return;
+    }
+    if (this.fallPhase === 'falling') return;
     const len = Math.hypot(dx, dz) || 1;
     this.knockback.set((dx / len) * speed, 0, (dz / len) * speed);
-    this.stunTime = stunSec;
+    this.fallTiming = timing;
+    if (this.fallPhase === 'gettingUp') {
+      // Ngã lại từ độ cao hiện tại
+      this.fallTimer = Math.sqrt(this.fallAmt) * timing.fallSec;
+    } else {
+      this.fallTimer = 0;
+      this.targetAngle = Math.atan2(-dx, -dz);
+      this.group.rotation.y = this.targetAngle;
+    }
+    this.fallPhase = 'falling';
+  }
+
+  private updateFall(dt: number): void {
+    const t = this.fallTiming;
+    this.fallTimer += dt;
+    this.fallClock += dt;
+    if (this.fallPhase === 'falling') {
+      const k = Math.min(1, this.fallTimer / t.fallSec);
+      this.fallAmt = easeIn(k);
+      if (k >= 1) this.enterFallPhase('lying');
+    } else if (this.fallPhase === 'lying') {
+      this.fallAmt = 1;
+      if (this.fallTimer >= t.lieSec) this.enterFallPhase('gettingUp');
+    } else if (this.fallPhase === 'gettingUp') {
+      const k = Math.min(1, this.fallTimer / t.getUpSec);
+      this.fallAmt = 1 - easeInOut(k);
+      if (k >= 1) {
+        this.fallAmt = 0;
+        this.fallPhase = 'none';
+        this.updateArms();
+      }
+    }
+  }
+
+  private enterFallPhase(next: FallPhase): void {
+    this.fallPhase = next;
+    this.fallTimer = 0;
   }
 
   /** Góc nhìn thứ nhất: thân luôn quay theo hướng camera (null = quay theo hướng đi) */
@@ -126,9 +191,10 @@ export class Player {
 
   update(dt: number, move: { x: number; z: number }, speed: number, colliders: readonly AABB[]): void {
     let moving = false;
-    if (this.stunTime > 0) {
-      this.stunTime -= dt;
-      this.group.rotation.y += dt * STUN_SPIN_SPEED;
+    if (this.fallPhase !== 'none') {
+      // Đang ngã/nằm/đứng dậy: không đi được, cũng không bị tính là "đứng không"
+      this.updateFall(dt);
+      this.markActive();
     } else {
       const len = Math.hypot(move.x, move.z);
       moving = len > 0;
@@ -156,5 +222,6 @@ export class Player {
 
     this.idleTime = moving ? 0 : this.idleTime + dt;
     this.body.animate(dt, moving, speed / 4);
+    this.body.setFallPose(this.fallAmt, this.fallClock);
   }
 }

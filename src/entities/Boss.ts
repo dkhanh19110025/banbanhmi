@@ -5,20 +5,47 @@ import { type StateHandlers, StateMachine } from '../core/StateMachine';
 import type { BossMood, ShiftConfig } from '../data/difficulty';
 import { DIALOGUES, fillLine } from '../data/dialogues';
 import { formatMoney } from '../data/menu';
-import { SpeechBubble, StatusIcon, type WorldLabels } from '../ui/DialogBubble';
+import { SpeechBubble, StatusIcon, type WorldLabel, type WorldLabels } from '../ui/DialogBubble';
 import { distanceXZ } from '../world/Collision';
 import { Humanoid, stepToward } from '../world/Humanoid';
 import type { Player } from '../world/Player';
 import type { Restaurant } from '../world/Restaurant';
 
 // Tình huống 5 — Chủ quán đi tuần (docs/GAME_DESIGN.md mục 4, 3.1).
-// ENTERING → RETURNING → PATROLLING ⇄ STOPPED / CHECKING_BOOK
-// Bất kỳ lúc nào có "món nợ" (sổ sai, khách quỵt, thanh bực đầy) → CHARGING → SLAPPING → RETURNING
-export type BossState = 'ENTERING' | 'PATROLLING' | 'STOPPED' | 'CHECKING_BOOK' | 'CHARGING' | 'SLAPPING' | 'RETURNING';
+// Ông chủ tên dkhanh. Hai kiểu làm việc:
+//  - Đi tuần (ca 2+): ENTERING → RETURNING → PATROLLING ⇄ STOPPED / CHECKING_BOOK
+//  - Chỉ ghé kiểm sổ (ca 1): AWAY → ARRIVING (đi từ cửa vào) → CHECKING_BOOK → LEAVING (đi ra) → AWAY
+// Bất kỳ lúc nào có "món nợ" (sổ sai, khách quỵt, thanh bực đầy) → CHARGING → SLAPPING → RETURNING / LEAVING
+export type BossState =
+  | 'ENTERING'
+  | 'PATROLLING'
+  | 'STOPPED'
+  | 'CHECKING_BOOK'
+  | 'CHARGING'
+  | 'SLAPPING'
+  | 'RETURNING'
+  | 'AWAY'
+  | 'ARRIVING'
+  | 'LEAVING';
 
 /** Trạng thái chủ quán đang thong thả (có thể đi tuần, bắt quả tang, nghe tiếng dép) */
-const CALM_STATES: ReadonlySet<BossState> = new Set(['PATROLLING', 'STOPPED', 'CHECKING_BOOK', 'RETURNING']);
-const WALKING_STATES: ReadonlySet<BossState> = new Set(['PATROLLING', 'RETURNING', 'CHARGING']);
+const CALM_STATES: ReadonlySet<BossState> = new Set([
+  'PATROLLING',
+  'STOPPED',
+  'CHECKING_BOOK',
+  'RETURNING',
+  'ARRIVING',
+  'LEAVING',
+]);
+const WALKING_STATES: ReadonlySet<BossState> = new Set([
+  'PATROLLING',
+  'RETURNING',
+  'CHARGING',
+  'ARRIVING',
+  'LEAVING',
+]);
+/** Chiều cao bảng tên trên đầu (dưới icon trạng thái) */
+const NAME_TAG_Y = 2.25;
 
 const SLAP_REACH = 1.0;
 const SLAP_SWING_SEC = 0.3;
@@ -44,6 +71,8 @@ export interface BossDeps {
   restaurant: Restaurant;
   player: Player;
   mood: BossMood;
+  /** true: đi tuần, có thanh bực (ca 2+). false: chỉ ghé quầy kiểm sổ rồi đi (ca 1) */
+  patrols: boolean;
 }
 
 export class Boss {
@@ -54,6 +83,7 @@ export class Boss {
   private readonly icon: StatusIcon;
   private readonly speech: SpeechBubble;
   private readonly footstep: SpeechBubble;
+  private readonly nameTag: WorldLabel;
   private readonly offs: Array<() => void> = [];
   private routeIndex = 0;
   private target: THREE.Vector3 | null = null;
@@ -64,29 +94,36 @@ export class Boss {
   private auditActive = false;
   private idleCooldown = 0;
   private footstepTimer = 0;
+  /** Đường đi theo các điểm (vào quầy / ra cửa) */
+  private path: THREE.Vector3[] = [];
+  private pathIndex = 0;
+  /** Chế độ ghé kiểm sổ: bao lâu nữa thì tới lần ghé kế tiếp */
+  private visitWait: number;
 
   constructor(deps: BossDeps) {
     this.deps = deps;
     const { bus, cfg, labels, restaurant } = deps;
 
-    // Ông chủ: áo ba lỗ, bụng bia, ria mép, to con hơn nhân viên
+    // Ông chủ dkhanh: đẹp trai, cao ráo — sơ mi trắng tay dài, tóc vuốt gọn, không bụng bia
     this.body = new Humanoid({
-      shirt: 0xf5f5f5,
+      shirt: 0xfafafa,
       pants: 0x1b2631,
-      skin: 0xd9a066,
-      hair: { style: 'combover', color: 0x2d2d2d },
-      shoes: 0x2980b9, // dép tổ ong xanh
-      sleeves: 'none',
-      build: 1.15,
-      belly: true,
-      mustache: 0x111111,
+      skin: 0xe8b98a,
+      hair: { style: 'spiky', color: 0x1b1b1b },
+      shoes: 0x1a1a1a,
+      sleeves: 'long',
+      build: 1.02,
+      goldChain: true,
     });
-    this.body.group.scale.setScalar(1.1);
+    this.body.group.scale.setScalar(1.08);
     this.body.group.position.copy(restaurant.bossSpawn);
 
     this.icon = new StatusIcon(labels, this.body.group, 2.7);
     this.speech = new SpeechBubble(labels, this.body.group, 3.3);
     this.footstep = new SpeechBubble(labels, this.body.group, 0.2, 'footstep');
+    this.nameTag = labels.create(this.body.group, NAME_TAG_Y, 'boss-name');
+    this.nameTag.el.textContent = DIALOGUES.bossName;
+    this.visitWait = randomIn(cfg.auditIntervalSec);
 
     this.offs.push(
       bus.on('customer:angryLeave', () => this.addAnger(cfg.angerAngryLeave, DIALOGUES.angerReasonAngry)),
@@ -104,7 +141,12 @@ export class Boss {
         this.queueHit({ amount: 0, reason: DIALOGUES.reasonCatStolen, resetsAnger: false, ending: 'catLost' });
       }),
       bus.on('audit:warning', (a) => this.speech.say(a.question, a.seconds)),
-      bus.on('audit:none', () => (this.auditActive = false)),
+      bus.on('audit:none', () => {
+        this.auditActive = false;
+        // Chưa có gì để kiểm thì đi, lát quay lại sớm hơn
+        this.visitWait = cfg.auditRetrySec;
+        if (this.fsm.state === 'CHECKING_BOOK') this.speech.say(pick(DIALOGUES.bossNothingToAudit), 2);
+      }),
       bus.on('audit:result', (r) => {
         this.auditActive = false;
         this.speech.say(r.line, 2.5);
@@ -117,7 +159,7 @@ export class Boss {
       }),
     );
 
-    this.fsm = new StateMachine<BossState, Boss>(this, this.buildStates(), 'ENTERING');
+    this.fsm = new StateMachine<BossState, Boss>(this, this.buildStates(), deps.patrols ? 'ENTERING' : 'AWAY');
     this.emitAnger();
   }
 
@@ -139,12 +181,17 @@ export class Boss {
       this.angerSlapQueued = true;
       this.queueHit({ amount: cfg.penaltyAngerSlap, reason: DIALOGUES.angerReasonFull, resetsAnger: true });
     }
-    if (this.pending.length > 0 && CALM_STATES.has(this.fsm.state)) this.fsm.go('CHARGING');
+    if (this.pending.length > 0) {
+      if (CALM_STATES.has(this.fsm.state)) this.fsm.go('CHARGING');
+      // Đang ở ngoài mà có món nợ → vào tính sổ
+      else if (this.fsm.state === 'AWAY') this.fsm.go('ARRIVING');
+    }
 
     // Bắt quả tang đứng không
     this.idleCooldown -= dt;
     const dist = distanceXZ(player.position, this.position);
     if (
+      this.deps.patrols &&
       CALM_STATES.has(this.fsm.state) &&
       this.idleCooldown <= 0 &&
       player.idleTime >= cfg.idleCatchSec &&
@@ -180,13 +227,15 @@ export class Boss {
     this.icon.dispose();
     this.speech.dispose();
     this.footstep.dispose();
+    this.deps.labels.remove(this.nameTag);
     this.body.dispose();
   }
 
   // ---------- Thanh bực ----------
 
   private addAnger(amount: number, reason?: string): void {
-    const { cfg, mood, bus } = this.deps;
+    const { cfg, mood, bus, patrols } = this.deps;
+    if (!patrols) return;
     const gain = amount * mood.angerMultiplier;
     this.anger = Math.min(cfg.angerMax, this.anger + gain);
     if (reason) bus.emit('toast', { text: `😤 Chủ quán bực +${Math.round(gain)}: ${reason}`, kind: 'warn' });
@@ -197,7 +246,8 @@ export class Boss {
   }
 
   private emitAnger(): void {
-    const { cfg, mood, bus } = this.deps;
+    const { cfg, mood, bus, patrols } = this.deps;
+    if (!patrols) return;
     bus.emit('boss:anger', { anger: this.anger, max: cfg.angerMax, mood: DIALOGUES.moodNames[mood.id] });
   }
 
@@ -206,6 +256,10 @@ export class Boss {
   }
 
   private updateIcon(): void {
+    if (this.fsm.state === 'AWAY') {
+      this.icon.hide();
+      return;
+    }
     const ratio = this.anger / this.deps.cfg.angerMax;
     if (this.fsm.state === 'CHARGING') this.icon.show('💢💢💢', null, 'bad blink');
     else if (this.fsm.state === 'CHECKING_BOOK') this.icon.show('📒 Kiểm sổ', null, 'warn');
@@ -236,6 +290,46 @@ export class Boss {
     return best;
   }
 
+  /** Hiện/ẩn ông chủ (và bảng tên) khi ra vào quán */
+  private setOnStage(on: boolean): void {
+    this.body.group.visible = on;
+    this.nameTag.setVisible(on);
+  }
+
+  private startPath(points: THREE.Vector3[]): void {
+    this.path = points;
+    this.pathIndex = 0;
+  }
+
+  /** Đi dọc đường đã đặt. Trả về true khi tới điểm cuối. */
+  private followPath(dt: number, speed: number): boolean {
+    this.target = this.path[this.pathIndex] ?? null;
+    if (!this.target) return true;
+    if (this.walkTo(dt, speed)) this.pathIndex++;
+    return this.pathIndex >= this.path.length;
+  }
+
+  /** Lối đi từ cửa vào chỗ kiểm sổ ở quầy (các waypoint của vòng tuần đi ngược lại) */
+  private laneToCounter(): THREE.Vector3[] {
+    const route = this.deps.restaurant.bossRoute;
+    const counter = route.findIndex((w) => w.stop === 'counter');
+    const door = route.findIndex((w) => w.stop === 'door');
+    return route
+      .slice(counter, door + 1)
+      .map((w) => w.pos)
+      .reverse();
+  }
+
+  /** Xong việc: đi tuần tiếp, hoặc (ca 1) đi ra cửa */
+  private finishVisit(): void {
+    if (this.deps.patrols) {
+      this.advanceRoute();
+      this.fsm.go('PATROLLING');
+    } else {
+      this.fsm.go('LEAVING');
+    }
+  }
+
   private advanceRoute(): void {
     this.routeIndex = (this.routeIndex + 1) % this.deps.restaurant.bossRoute.length;
     this.target = this.deps.restaurant.bossRoute[this.routeIndex].pos;
@@ -248,6 +342,51 @@ export class Boss {
     const route = restaurant.bossRoute;
 
     return {
+      // Ngoài đường, chờ tới lần ghé kiểm sổ kế tiếp
+      AWAY: {
+        enter: () => {
+          this.setOnStage(false);
+          this.footstepTimer = 0;
+        },
+        update: () => {
+          if (this.fsm.timeInState >= this.visitWait) this.fsm.go('ARRIVING');
+        },
+      },
+
+      // Từ ngoài cửa đi vào quầy
+      ARRIVING: {
+        enter: () => {
+          this.visitWait = randomIn(cfg.auditIntervalSec);
+          this.body.group.position.copy(restaurant.doorOutside);
+          this.setOnStage(true);
+          this.startPath(this.laneToCounter());
+        },
+        update: (_b, dt) => {
+          if (this.followPath(dt, cfg.bossWalkSpeed)) this.fsm.go('CHECKING_BOOK');
+        },
+      },
+
+      // Kiểm xong (hoặc tát xong) thì đi ra cửa
+      LEAVING: {
+        enter: () => {
+          // Về lối gần nhất trong quán rồi men theo lối ra cửa
+          const lane = this.laneToCounter().reverse();
+          let nearest = 0;
+          let best = Infinity;
+          lane.forEach((p, i) => {
+            const d = distanceXZ(p, this.position);
+            if (d < best) {
+              best = d;
+              nearest = i;
+            }
+          });
+          this.startPath([...lane.slice(nearest), restaurant.doorOutside]);
+        },
+        update: (_b, dt) => {
+          if (this.followPath(dt, cfg.bossWalkSpeed)) this.fsm.go('AWAY');
+        },
+      },
+
       ENTERING: {
         update: () => {
           if (this.fsm.timeInState >= cfg.bossStartDelaySec) this.fsm.go('RETURNING');
@@ -303,10 +442,7 @@ export class Boss {
         update: () => {
           const t = this.fsm.timeInState;
           const done = !this.auditActive && t >= AUDIT_MIN_STAY_SEC;
-          if (done || t >= cfg.auditWarningSec + AUDIT_EXTRA_WAIT_SEC) {
-            this.advanceRoute();
-            this.fsm.go('PATROLLING');
-          }
+          if (done || t >= cfg.auditWarningSec + AUDIT_EXTRA_WAIT_SEC) this.finishVisit();
         },
       },
 
@@ -345,7 +481,11 @@ export class Boss {
           const dx = player.position.x - this.position.x;
           const dz = player.position.z - this.position.z;
           this.body.faceDirection(dx, dz);
-          player.hit(dx, dz, cfg.slapKnockbackSpeed, cfg.slapStunSec);
+          player.hit(dx, dz, cfg.slapKnockbackSpeed, {
+            fallSec: cfg.slapFallSec,
+            lieSec: cfg.slapLieSec,
+            getUpSec: cfg.slapGetUpSec,
+          });
           bus.emit('boss:hit', { amount, reason });
           this.body.armsLocked = true;
           // Mất mèo: đánh xong đuổi việc (hậu quả nặng, kết thúc ca)
@@ -358,7 +498,9 @@ export class Boss {
           const arm = this.body.arms[1];
           arm.rotation.x = t < SLAP_SWING_SEC ? -2.8 + (t / SLAP_SWING_SEC) * 2.4 : -0.4;
           arm.rotation.z = t < SLAP_SWING_SEC ? 0.6 : 0;
-          if (t >= cfg.slapRecoverSec) this.fsm.go(this.pending.length > 0 ? 'CHARGING' : 'RETURNING');
+          if (t < cfg.slapRecoverSec) return;
+          if (this.pending.length > 0) this.fsm.go('CHARGING');
+          else this.fsm.go(this.deps.patrols ? 'RETURNING' : 'LEAVING');
         },
         exit: () => {
           this.body.armsLocked = false;

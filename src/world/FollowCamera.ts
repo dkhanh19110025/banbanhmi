@@ -13,6 +13,10 @@ const MIN_DISTANCE = 0.6;
 /** Tốc độ camera lùi ra lại sau khi hết bị tường chắn */
 const ZOOM_OUT_SPEED = 6;
 const FOLLOW_SPEED = 18;
+/** Camera khi nhân vật ngã ngửa */
+const FALL_EYE_DROP = 1.3;
+const FALL_LOOK_UP = 1.0;
+const FALL_PIVOT_DROP = 0.9;
 
 /**
  * Camera bám theo nhân viên: xoay bằng chuột, có 2 chế độ (sau lưng / mắt nhân vật).
@@ -22,6 +26,8 @@ export class FollowCamera {
   yaw = Math.PI;
   pitch = THIRD.defaultPitch;
   mode: ViewMode = 'third';
+  /** Nhân vật ngã: 0 = đứng, 1 = nằm. Camera hạ thấp và ngước lên trần */
+  fall = 0;
   private distance = THIRD.distance;
   private readonly pivot = new THREE.Vector3();
   private readonly ray = new THREE.Raycaster();
@@ -75,11 +81,17 @@ export class FollowCamera {
   update(dt: number, target: THREE.Vector3, shake: THREE.Vector3, snap = false): void {
     const t = snap ? 1 : 1 - Math.exp(-FOLLOW_SPEED * dt);
     const f = this.forward;
-    const cosP = Math.cos(this.pitch);
-    const sinP = Math.sin(this.pitch);
+    // Ngã ngửa: mắt hạ sát sàn và ngước nhìn trần
+    const pitch = this.mode === 'first' ? this.pitch * (1 - this.fall) - FALL_LOOK_UP * this.fall : this.pitch;
+    const cosP = Math.cos(pitch);
+    const sinP = Math.sin(pitch);
 
     if (this.mode === 'first') {
-      this.pivot.set(target.x + f.x * FIRST.forwardOffset, FIRST.eyeY, target.z + f.z * FIRST.forwardOffset);
+      this.pivot.set(
+        target.x + f.x * FIRST.forwardOffset,
+        FIRST.eyeY - FALL_EYE_DROP * this.fall,
+        target.z + f.z * FIRST.forwardOffset,
+      );
       this.camera.position.copy(this.pivot).add(shake);
       this.tmpLook.set(f.x * cosP, -sinP, f.z * cosP).add(this.camera.position);
       this.camera.lookAt(this.tmpLook);
@@ -88,7 +100,7 @@ export class FollowCamera {
 
     // Điểm xoay trên vai phải nhân vật, bám mượt theo vị trí
     const r = this.right;
-    this.tmpPos.set(target.x + r.x * THIRD.shoulder, THIRD.pivotY, target.z + r.z * THIRD.shoulder);
+    this.tmpPos.set(target.x + r.x * THIRD.shoulder, THIRD.pivotY - FALL_PIVOT_DROP * this.fall, target.z + r.z * THIRD.shoulder);
     if (snap) this.pivot.copy(this.tmpPos);
     else this.pivot.lerp(this.tmpPos, t);
 

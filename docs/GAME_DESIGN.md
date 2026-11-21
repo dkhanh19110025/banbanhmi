@@ -235,6 +235,12 @@ SLEEPING → (catSleep thấp) WAKING_UP → WANDERING → (bị bế đi bởi 
 
 ### Tình huống 5: Chủ quán đi tuần (tình huống nền)
 
+**Nhân vật**: ông chủ tên **dkhanh** (bảng tên đỏ trên đầu), là người thật đi lại trong quán, không phải giọng hét.
+- **Ca 1**: dkhanh không đi tuần, chỉ thỉnh thoảng bước từ cửa vào quầy kiểm sổ, xong đi ra. Không có thanh bực.
+- **Ca 2+**: đi tuần đầy đủ như bên dưới.
+
+**Bị tát**: bàn tay to đập lên màn hình, nhân viên văng ra, **ngã ngửa → nằm → đứng dậy**. Không điều khiển được cho tới khi đứng dậy xong (thời gian chỉnh ở `slapFallSec`, `slapLieSec`, `slapGetUpSec` trong `difficulty.ts`).
+
 **Hành vi**
 - Chủ quán di chuyển ngẫu nhiên theo lộ trình, dừng ở quầy, bếp, bàn ăn.
 - Có **tiếng dép lê** báo hiệu khi tiến lại gần.

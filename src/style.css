@@ -112,6 +112,18 @@ kbd { background: #fff; color: #222; border-radius: 4px; padding: 1px 7px; font-
 .footstep { font-size: 12px; font-weight: 700; color: #fff; background: rgba(0,0,0,0.55); padding: 1px 6px; border-radius: 8px; }
 .status-icon.sneak { border-color: #9b59b6; color: #8e44ad; opacity: 0.85; }
 .fx-flash { position: absolute; inset: 0; background: #fff; animation: flash 0.4s ease-out forwards; }
+/* Bàn tay tát: bay từ phải vào, đập giữa màn hình, để lại vệt đỏ */
+.fx-hand { position: absolute; top: 50%; left: 50%; font-size: min(70vh, 70vw); line-height: 1; filter: drop-shadow(10px 10px 0 rgba(0,0,0,0.35)); pointer-events: none; animation: hand-slap 1.2s ease-out forwards; }
+@keyframes hand-slap {
+  0% { transform: translate(70vw, -50%) rotate(55deg) scale(0.7); opacity: 1; }
+  16% { transform: translate(-50%, -50%) rotate(-14deg) scale(1.25); opacity: 1; }
+  24% { transform: translate(-56%, -50%) rotate(-6deg) scale(1.4); opacity: 1; }
+  70% { transform: translate(-56%, -50%) rotate(-6deg) scale(1.4); opacity: 1; }
+  100% { transform: translate(-80%, -50%) rotate(-4deg) scale(1.3); opacity: 0; }
+}
+.fx-handprint { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 50%, rgba(231,76,60,0.15) 15%, rgba(192,57,43,0.6) 100%); animation: handprint-fade 1.8s ease-out forwards; }
+@keyframes handprint-fade { 0%, 12% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+.boss-name { font-size: 12px; font-weight: 800; color: #fff; background: #c0392b; border: 2px solid #2b1d14; border-radius: 8px; padding: 0 7px; box-shadow: 2px 2px 0 #2b1d14; }
 @keyframes flash { from { opacity: 0.85; } to { opacity: 0; } }
 
 /* ---------- Bảng giới thiệu ---------- */
@@ -142,6 +154,7 @@ kbd { background: #fff; color: #222; border-radius: 4px; padding: 1px 7px; font-
 .in-empty { font-style: italic; opacity: 0.7; font-size: 14px; }
 .in-footer { position: sticky; bottom: 0; text-align: center; padding: 12px 16px 16px; background: #fff8dc; border-top: 2px dashed #c0392b; }
 .in-start { font: inherit; font-size: 26px; font-weight: 900; padding: 14px 44px; border: 4px solid #2b1d14; border-radius: 14px; background: #27ae60; color: #fff; cursor: pointer; box-shadow: 5px 5px 0 #2b1d14; animation: in-pulse 1.2s ease-in-out infinite; }
+.in-install { margin: 0 auto 10px; max-width: 520px; font-size: 13px; line-height: 1.35; background: #fff; border: 2px dashed #2980b9; border-radius: 10px; padding: 6px 10px; color: #1b4f72; }
 .in-start small { display: block; font-size: 12px; font-weight: 600; opacity: 0.85; }
 .in-start:hover { background: #2ecc71; }
 .in-start:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 #2b1d14; }

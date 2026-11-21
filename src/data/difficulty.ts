@@ -86,8 +86,10 @@ export interface ShiftConfig {
   bossSightRange: number;
   idleCatchSec: number;
   idleCatchCooldownSec: number;
-  /** Bị tát: choáng và văng ra */
-  slapStunSec: number;
+  /** Bị tát: văng ra, ngã ngửa → nằm đó → đứng dậy xong mới đi được */
+  slapFallSec: number;
+  slapLieSec: number;
+  slapGetUpSec: number;
   slapKnockbackSpeed: number;
   /** Tát xong đứng thở bấy nhiêu giây rồi mới đi tiếp */
   slapRecoverSec: number;
@@ -175,7 +177,7 @@ const BASE: BaseConfig = {
   stationRangeBonus: 1,
 
   firstSpawnDelaySec: 2,
-  spawnIntervalSec: [9, 15],
+  spawnIntervalSec: [12, 20],
   maxCustomers: 4,
   customerWalkSpeed: 2.8,
 
@@ -203,7 +205,9 @@ const BASE: BaseConfig = {
   bossSightRange: 5,
   idleCatchSec: 5,
   idleCatchCooldownSec: 15,
-  slapStunSec: 0.9,
+  slapFallSec: 0.35,
+  slapLieSec: 1.6,
+  slapGetUpSec: 0.9,
   slapKnockbackSpeed: 7,
   slapRecoverSec: 1.2,
 
@@ -259,7 +263,7 @@ const BASE: BaseConfig = {
 
 /** Mỗi ca sau khách tới dày hơn chút */
 const SPAWN_SPEEDUP_PER_DAY = 0.9;
-const MIN_SPAWN_INTERVAL: Range = [4, 7];
+const MIN_SPAWN_INTERVAL: Range = [7, 12];
 /** Ca bắt đầu có từng tình huống (mục 9: mỗi ca giới thiệu riêng một thứ) */
 export const BOSS_FROM_DAY = 2;
 export const RUNAWAY_FROM_DAY = 3;

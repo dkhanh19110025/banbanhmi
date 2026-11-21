@@ -347,12 +347,14 @@ export class Game {
   private updateCamera(dt: number): void {
     const { dx, dy } = this.input.consumeMouse();
     if (this.phase === 'playing' && !this.notebook.isOpen) this.follow.rotate(dx, dy);
+    this.follow.fall = this.player.fallAmount;
     this.follow.update(dt, this.player.position, this.fx.shakeOffset);
   }
 
   /** Đặt camera ngay sau lưng nhân viên, nhìn theo hướng nhân viên đang quay */
   private snapCamera(): void {
     this.follow.reset(this.player.group.rotation.y);
+    this.follow.fall = this.player.fallAmount;
     this.follow.update(0, this.player.position, this.fx.shakeOffset, true);
   }
 

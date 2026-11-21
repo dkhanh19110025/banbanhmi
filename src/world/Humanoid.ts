@@ -45,6 +45,8 @@ const LEG_SWING = 0.55;
 const KNEE_BEND = 0.75;
 const ARM_SWING = 0.45;
 const ELBOW_REST = -0.18;
+/** Nâng thân khi ngã ngửa để lưng nằm trên sàn */
+const FALL_LIFT = 0.22;
 
 function mat(color: number, roughness = 0.8): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color, roughness });
@@ -93,6 +95,7 @@ export class Humanoid {
   private walkPhase = 0;
   private idlePhase = Math.random() * 10;
   private sitting = false;
+  private fallPosed = false;
 
   constructor(look: HumanoidLook) {
     const build = look.build ?? 1;
@@ -504,6 +507,31 @@ export class Humanoid {
     for (const hip of this.hips) hip.rotation.x = sitting ? -Math.PI / 2 : 0;
     for (const knee of this.knees) knee.rotation.x = sitting ? Math.PI / 2 : 0;
     this.upper.rotation.y = 0;
+  }
+
+  /**
+   * Tư thế ngã ngửa: amount 0 = đứng, 1 = nằm bẹp. Gọi SAU animate() để đè lên tư thế đi bộ.
+   * Thân xoay quanh gót chân, đầu ngả ra sau lưng; tay chân quơ loạn cho bựa.
+   */
+  setFallPose(amount: number, time: number): void {
+    if (amount <= 0) {
+      if (this.fallPosed) {
+        this.rig.rotation.x = 0;
+        this.rig.position.y = 0;
+        this.fallPosed = false;
+      }
+      return;
+    }
+    this.fallPosed = true;
+    this.rig.rotation.x = -(Math.PI / 2) * amount;
+    // Nâng lên một chút để lưng nằm trên sàn chứ không lún xuống
+    this.rig.position.y = FALL_LIFT * amount;
+    const flail = Math.sin(time * 14) * 0.35;
+    this.arms[0].rotation.x = (-2.3 + flail) * amount;
+    this.arms[1].rotation.x = (-2.3 - flail) * amount;
+    for (const hip of this.hips) hip.rotation.x = -0.7 * amount;
+    for (const knee of this.knees) knee.rotation.x = 0.9 * amount;
+    for (const elbow of this.elbows) elbow.rotation.x = -0.4 * amount;
   }
 
   faceDirection(dx: number, dz: number): void {

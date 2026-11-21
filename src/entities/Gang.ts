@@ -349,7 +349,11 @@ export class Gang {
       BEATING: {
         enter: () => {
           const g = this.leader.group.position;
-          player.hit(player.position.x - g.x, player.position.z - g.z, BEAT_KNOCKBACK, BEAT_STUN_SEC);
+          player.hit(player.position.x - g.x, player.position.z - g.z, BEAT_KNOCKBACK, {
+            fallSec: 0.3,
+            lieSec: BEAT_STUN_SEC,
+            getUpSec: 1,
+          });
           for (const m of this.members) m.body.armsLocked = true;
           bus.emit('gang:beatUp', {});
         },

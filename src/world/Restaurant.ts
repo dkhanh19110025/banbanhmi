@@ -1014,8 +1014,8 @@ export class Restaurant {
       this.buildCondimentTray(trayX, t.z);
 
       // Số bàn: biển treo dưới trần (quay về lối đi) + thẻ nhỏ dựng cạnh khay
-      this.hangingSign([`BÀN ${t.number}`], '#2d3436', '#ffffff', 1.1, t.x, t.z, Math.PI / 2);
-      const card = doubleSidedSign([`${t.number}`], { bg: '#ffffff', fg: '#c0392b', width: 0.22, fontPx: 90 });
+      this.hangingSign([`BÀN ${t.number}`], '#f1c40f', '#2d3436', 1.5, t.x, t.z, Math.PI / 2);
+      const card = doubleSidedSign([`${t.number}`], { bg: '#ffffff', fg: '#c0392b', width: 0.34, fontPx: 90 });
       card.position.set(trayX, TABLE_TOP_Y + 0.13, t.z - 0.5);
       card.rotation.y = Math.PI / 2;
       this.root.add(card);

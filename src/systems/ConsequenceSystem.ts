@@ -16,6 +16,7 @@ export class ConsequenceSystem {
       bus.on('boss:hit', (p) => {
         fx.shake(0.9);
         fx.flash();
+        fx.slapHand();
         fx.bigText(DIALOGUES.slap, 'slap');
         if (p.amount > 0) bus.emit('salary:penalty', { amount: p.amount, reason: p.reason });
       }),

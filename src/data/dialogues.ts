@@ -48,7 +48,10 @@ export const DIALOGUES = {
   penaltyReasonRunaway: 'Để bàn {table} quỵt {amount}',
 
   // --- Chủ quán đi tuần ---
-  bossSpeaker: 'Chủ quán (đứng ở quầy)',
+  /** Tên ông chủ quán, hiện trên đầu và trong lời thoại */
+  bossName: 'dkhanh',
+  bossSpeaker: 'dkhanh (chủ quán, đứng ở quầy)',
+  bossNothingToAudit: ['Chưa thu đồng nào à? Rảnh ghê.', 'Không có gì để coi hả? Thôi tao đi.'],
   bossFootstep: '🩴 lẹp xẹp',
   bossMurmur: [
     'Hừm…',
@@ -113,13 +116,13 @@ export const DIALOGUES = {
       { icon: '🔥', text: 'Ra <b>BẾP</b> bấm <kbd>E</kbd>, đứng đó chờ bánh chín' },
       { icon: '🥖', text: 'Mang bánh tới đúng bàn, bấm <kbd>E</kbd> để đưa' },
       { icon: '💵', text: 'Khách ăn xong ra <b>QUẦY</b> → bấm <kbd>E</kbd> thu tiền' },
-      { icon: '✏️', text: 'Thu xong mở sổ <kbd>N</kbd>, ghi đúng bàn + món. Chủ quán sẽ hỏi!' },
+      { icon: '✏️', text: 'Thu xong mở sổ <kbd>N</kbd>, ghi đúng bàn + món. Ông chủ dkhanh sẽ ghé hỏi!' },
     ],
     dangersTitle: '⚠️ Hiểm họa',
     dangers: [
       {
         icon: '😤',
-        name: 'Chủ quán đi tuần',
+        name: 'Chủ quán dkhanh đi tuần',
         from: 'Từ ca 2',
         text: 'Nghe "🩴 lẹp xẹp" là ổng tới. Đứng không, ghi sổ sai, để khách bỏ về → thanh bực tăng. Đầy là ăn tát.',
       },
@@ -272,7 +275,7 @@ export const DIALOGUES = {
   briefing: {
     title: 'CA {day}',
     moodLabel: 'Chủ quán hôm nay',
-    noBoss: 'Chủ quán ở nhà trong, thỉnh thoảng hét ra hỏi sổ.',
+    noBoss: 'dkhanh chưa đi tuần, chỉ thỉnh thoảng ghé quầy hỏi sổ.',
     eventLabel: 'Sự kiện',
     noEvent: 'Một ngày bình thường. Nghe đáng ngờ.',
     newLabel: '🆕 Mới hôm nay',
@@ -281,7 +284,7 @@ export const DIALOGUES = {
     mixed: 'Mọi thứ đều có thể xảy ra cùng lúc. Chúc may mắn.',
   },
   newToday: {
-    1: 'Ca đầu tiên! Nhận order → làm bánh ở bếp → đưa món → thu tiền ở quầy → GHI SỔ (N). Chủ quán sẽ hét hỏi sổ đó.',
+    1: 'Ca đầu tiên! Nhận order → làm bánh ở bếp → đưa món → thu tiền ở quầy → GHI SỔ (N). Ông chủ dkhanh sẽ ghé quầy hỏi sổ đó.',
     2: 'Chủ quán bắt đầu đi tuần. Nghe "🩴 lẹp xẹp" là ổng tới — đừng đứng không, ghi sổ cho đúng. Thanh bực đầy là ăn tát.',
     3: 'Khách quỵt! Ăn xong mà ngồi liếc cửa, hiện ❓ là sắp chuồn. Chạy theo bấm E trước khi nó ra khỏi cửa.',
     4: 'Con mèo của quán! Kêu "meo" là sắp dậy. Bế về ổ, GIỮ E vuốt tới khi ngủ. Để khách bế mất mèo = bị đuổi.',
@@ -353,6 +356,7 @@ export const DIALOGUES = {
   reviewsBad: ['"Chờ 30 phút chưa thấy ai. 1 sao."', '"Nhân viên đi lạc trong quán của chính mình."'],
 
   // Điện thoại
+  installHint: '📲 Muốn mất thanh trình duyệt? Bấm <b>Chia sẻ</b> (ô vuông có mũi tên) → <b>Thêm vào MH chính</b>, rồi mở game từ icon mới.',
   rotateTitle: 'Xoay ngang điện thoại đi sếp!',
   rotateText: 'Quán chật lắm, đứng dọc không vừa. Xoay ngang màn hình để làm ca tiếp.',
   touchButtons: { interact: 'E', notebook: '📒', view: '👁️', pause: '⏸' },

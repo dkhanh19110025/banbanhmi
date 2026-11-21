@@ -50,6 +50,12 @@ export class IntroScreen {
          </div>`
       : `<div class="in-empty">${t.statsEmpty}</div>`;
 
+    // iPhone Safari không cho trang web tự toàn màn hình: chỉ có cách thêm vào màn hình chính
+    const nav = navigator as Navigator & { standalone?: boolean };
+    const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const installed = nav.standalone === true || window.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+    const installHint = IS_TOUCH && isIos && !installed ? `<div class="in-install">${DIALOGUES.installHint}</div>` : '';
+
     this.root.innerHTML = `
       <div class="in-card">
         <div class="in-hero">
@@ -72,6 +78,7 @@ export class IntroScreen {
           </section>
         </div>
         <div class="in-footer">
+          ${installHint}
           <button class="in-start">${fillLine(t.start, { day })} <small>${t.startHint}</small></button>
           ${day > 1 ? `<button class="in-restart">${t.restartFromOne}</button>` : ''}
         </div>

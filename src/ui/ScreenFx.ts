@@ -30,6 +30,20 @@ export class ScreenFx {
     window.setTimeout(() => el.remove(), 400);
   }
 
+  /** Bàn tay to đùng từ bên phải táp vào mặt người chơi, để lại vệt đỏ hằn trên màn hình */
+  slapHand(): void {
+    const mark = document.createElement('div');
+    mark.className = 'fx-handprint';
+    const hand = document.createElement('div');
+    hand.className = 'fx-hand';
+    hand.textContent = '🖐️';
+    this.root.append(mark, hand);
+    window.setTimeout(() => {
+      mark.remove();
+      hand.remove();
+    }, 1800);
+  }
+
   floatText(text: string): void {
     const el = document.createElement('div');
     el.className = 'fx-float';

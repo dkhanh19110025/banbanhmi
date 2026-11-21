@@ -93,24 +93,15 @@ export class Shift {
       labels,
       restaurant,
       now: () => this.elapsed,
-      auditMode: cfg.features.boss ? 'boss' : 'shout',
+      auditMode: 'boss',
     });
 
+    // Ông chủ dkhanh có mặt mọi ca: ca 1 chỉ ghé quầy kiểm sổ rồi đi, từ ca 2 đi tuần thật
+    const mood = deps.plan.mood;
+    this.boss = new Boss({ bus, cfg, labels, restaurant, player, mood, patrols: cfg.features.boss });
+    scene.add(this.boss.body.group);
     if (cfg.features.boss) {
-      const mood = deps.plan.mood;
-      this.boss = new Boss({ bus, cfg, labels, restaurant, player, mood });
-      scene.add(this.boss.body.group);
       bus.emit('toast', { text: fillLine(DIALOGUES.toastMood, { mood: DIALOGUES.moodNames[mood.id] }), kind: 'info' });
-    } else {
-      // Không có chủ quán đi lại: mất mèo vẫn là bị đuổi (phòng khi bật mèo mà tắt boss)
-      bus.on('cat:stolen', () => bus.emit('game:over', { ending: 'catLost' }));
-      // Không có chủ quán đi lại thì khách quỵt bị trừ lương thẳng (phòng khi bật quỵt mà tắt boss)
-      bus.on('customer:ranAway', (p) =>
-        bus.emit('salary:penalty', {
-          amount: Math.round(p.amount * cfg.runawayPenaltyMultiplier),
-          reason: fillLine(DIALOGUES.penaltyReasonRunaway, { table: p.table, amount: formatMoney(p.amount) }),
-        }),
-      );
     }
 
     bus.on('order:served', () => this.served++);
