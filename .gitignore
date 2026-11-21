@@ -1,0 +1,21 @@
+# Build & dependencies
+node_modules
+dist
+*.zip
+*.tsbuildinfo
+
+# Cloudflare / môi trường
+.wrangler
+.env
+.env.*
+.dev.vars
+
+# Log & file tạm
+*.log
+.DS_Store
+Thumbs.db
+
+# Công cụ cá nhân / editor
+.claude
+.vscode
+.idea

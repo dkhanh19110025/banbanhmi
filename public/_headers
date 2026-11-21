@@ -1,0 +1,11 @@
+# Cloudflare Pages (cũng Netlify đọc được file này)
+# File trong assets/ có mã băm trong tên → cache vĩnh viễn
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Trang chính luôn hỏi lại để nhận bản mới ngay sau khi deploy
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
+  Cache-Control: public, max-age=0, must-revalidate

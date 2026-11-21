@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# File trong assets/ có mã băm trong tên → cache vĩnh viễn, lần sau vào game gần như tức thì
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Trang chính luôn hỏi lại để nhận bản mới ngay sau khi deploy
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
