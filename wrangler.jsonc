@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "banbanhmi",
+  "name": "bmi",
   "compatibility_date": "2026-11-19",
   // Game chỉ có file tĩnh: Cloudflare phục vụ thẳng thư mục dist sau khi build
   "assets": {
