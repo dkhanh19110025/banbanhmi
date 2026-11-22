@@ -225,7 +225,8 @@ export class Hud {
       return;
     }
     for (const t of tickets) {
-      el('div', 'ticket', this.tickets).textContent = `Bàn ${t.table}: ${getDish(t.dish).name}`;
+      el('div', `ticket${t.priority ? ' priority' : ''}`, this.tickets).textContent =
+        t.table === 0 ? `${DIALOGUES.ticketShipper}: ${getDish(t.dish).name}` : `Bàn ${t.table}: ${getDish(t.dish).name}`;
     }
   }
 

@@ -5,6 +5,7 @@ export class ScreenFx {
   readonly shakeOffset = new THREE.Vector3();
   private readonly root: HTMLElement;
   private shakeAmount = 0;
+  private darkEl: HTMLElement | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -20,6 +21,18 @@ export class ScreenFx {
     el.textContent = text;
     this.root.appendChild(el);
     window.setTimeout(() => el.remove(), 1400);
+  }
+
+  /** Mất điện: phủ tối quanh màn hình (0 = sáng, 1 = đen kịt), giữa màn hình sáng hơn một chút */
+  setDarkness(level: number): void {
+    if (!this.darkEl) {
+      if (level <= 0) return;
+      this.darkEl = document.createElement('div');
+      this.darkEl.className = 'fx-dark';
+      this.root.appendChild(this.darkEl);
+    }
+    // Độ tối nằm trong màu gradient (biến --d) chứ không dùng opacity của phần tử
+    this.darkEl.style.setProperty('--d', String(Math.max(0, Math.min(1, level))));
   }
 
   /** Chớp trắng màn hình (cái tát nổ đom đóm mắt) */
@@ -64,6 +77,7 @@ export class ScreenFx {
 
   clear(): void {
     this.shakeAmount = 0;
+    this.darkEl = null;
     this.root.replaceChildren();
   }
 }

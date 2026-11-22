@@ -1,4 +1,4 @@
-# CLAUDE.md — Game "Tiệm Bánh Mì Địa Ngục" (tên tạm)
+# CLAUDE.md — Game "Shop Bán Bánh Mì"
 
 Tài liệu này mô tả ý tưởng, luật chơi, các tình huống và hướng làm kỹ thuật cho game 3D chạy trên web. Claude đọc file này trước khi viết code để hiểu game cần làm gì.
 
@@ -91,7 +91,7 @@ public/
 | Loại | Hậu quả | Kết thúc ca? |
 |---|---|---|
 | **Nhẹ** | Trừ lương, chủ quán tát | Không |
-| **Nặng** | Đuổi việc (mèo bị bế đi) hoặc nhập viện (bị giang hồ đánh) | Có → vào màn Game Over |
+| **Nặng** | Đuổi việc (mèo bị bế đi), nhập viện (bị giang hồ đánh) hoặc cháy quán (chảo cháy lan) | Có → vào màn Game Over |
 
 Chơi lại phải **nhanh**: bấm một nút là vào lại ca (dưới 2 giây), không bắt xem màn hình dài.
 
@@ -241,6 +241,11 @@ SLEEPING → (catSleep thấp) WAKING_UP → WANDERING → (bị bế đi bởi 
 
 **Bị tát**: bàn tay to đập lên màn hình, nhân viên văng ra, **ngã ngửa → nằm → đứng dậy**. Không điều khiển được cho tới khi đứng dậy xong (thời gian chỉnh ở `slapFallSec`, `slapLieSec`, `slapGetUpSec` trong `difficulty.ts`).
 
+**Nhây**
+- Mỗi cái tát ông luôn nói đúng một câu: **"M hả bưởi, làm được việc ko?"**.
+- Chào đầu ca theo tâm trạng; nếu bạn từng bị đuổi thì cà khịa theo số lần bị đuổi.
+- Từ ca 3: thấy bạn đang **bưng đồ** trong tầm nhìn, thỉnh thoảng ông nhảy ra **hỏi sổ bất ngờ** ngay tại chỗ, bạn phải bỏ việc, mở sổ (`N`) ghi cho đúng trong vài giây.
+
 **Hành vi**
 - Chủ quán di chuyển ngẫu nhiên theo lộ trình, dừng ở quầy, bếp, bàn ăn.
 - Có **tiếng dép lê** báo hiệu khi tiến lại gần.
@@ -262,16 +267,16 @@ SLEEPING → (catSleep thấp) WAKING_UP → WANDERING → (bị bế đi bởi 
 |---|---|---|---|
 | Khách đổi ý sau khi bánh làm xong | Khách vẫy tay gọi lại | Gỡ hành/làm lại | Chậm, trừ điểm |
 | Khách đòi giảm giá | Bong bóng "Quen mà!" | Chiều hoặc từ chối | Chiều → trừ lương; từ chối → rating giảm |
-| Hết nguyên liệu (pate, dưa leo, gas) | Icon cạn trên kệ | Chạy ra chợ mua | Khách chờ, cáu |
-| Chảo bốc cháy | Khói, tiếng xèo đổi | Dùng nắp vung (không tạt nước) | Cháy lan, trừ lương nặng |
+| ✅ Hết nguyên liệu (pate, dưa leo, gas) — ca 8 | Icon cạn trên kệ, thông báo sắp hết | Chạy ra chợ vỉa hè mua, cất lên kệ bếp | Món cần nguyên liệu đó không làm được, khách chờ cáu |
+| ✅ Chảo bốc cháy — ca 6 | Khói đen, tiếng dầu xèo, thông báo | Đậy nắp vung (tạt nước thì bùng to + trừ lương) | Cháy lan = **cháy quán** (kết thúc ca, chơi lại) |
 | Bánh nướng quá lửa | Tiếng "xèo" đổi, mùi khét | Lấy ra đúng lúc | Bánh hỏng, mất khách |
 | Chuột/gián trong bếp | Bóng chạy qua, tiếng kêu | Đuổi/đập | Thanh tra thấy → phạt nặng |
-| Thanh tra vệ sinh | Xe lạ đỗ trước quán | Dọn bếp sạch nhanh | Phạt tiền |
-| Shipper giục đơn | Còi xe bấm liên tục | Làm xong đơn ưu tiên | Shipper chửi, review xấu |
+| ✅ Thanh tra vệ sinh — ca 10 | Xe lạ đỗ trước quán, đếm ngược, các chỗ bẩn 🧽 hiện ra | Lau hết chỗ bẩn trước khi thanh tra vào | Phạt tiền theo số chỗ bẩn, mất rating, chủ quán bực |
+| ✅ Shipper giục đơn — ca 7 | Còi xe bíp bíp, phiếu ƯU TIÊN chen lên đầu | Làm xong đơn, đưa tận tay shipper ở cửa | Shipper hủy đơn, review xấu, trừ lương nhẹ, chủ quán bực |
 | Đồng nghiệp nhây đổ lỗi | Tin nhắn bóng gió | Có bằng chứng (sổ tay) | Chủ quán tin sai → trừ lương |
 | Nhóc con phá | Tiếng chạy, tiếng vỡ | Giữ trẻ lại | Đền ly vỡ |
 | Khách ngồi lì chiếm bàn | Ngồi sau khi ăn xong lâu | Dọn bàn xung quanh, bật quạt | Khách xếp hàng bỏ đi |
-| Mất điện | Đèn chớp, tiếng tắt | Bật máy phát/đốt nến | Không làm được món điện |
+| ✅ Mất điện — ca 9 (ngày mưa: chắc chắn có) | Đèn chớp, tiếng rè | Giữ `E` ở máy phát để nổ máy; thắp nến cho đỡ tối (bếp vẫn tắt) | Bếp không nướng được, màn hình tối, khách chờ cáu |
 
 ---
 
@@ -295,7 +300,7 @@ Mỗi khách có thuộc tính: `patience`, `type` (thường / quỵt / nhây /
 - **Trên đầu nhân vật**: bong bóng thoại, icon cảnh báo, thanh đếm ngược.
 - **Sổ tay**: bật bằng phím, dạng cuốn sổ, ghi bằng click chọn (không gõ phím).
 - **Màn cuối ca**: bảng lương thực nhận, danh sách lỗi, review khách hài hước.
-- **Game Over**: tên ending (Bị đuổi / Mất mèo / Nhập viện), số lần chết, nút chơi lại lớn.
+- **Game Over**: tên ending (Bị đuổi / Mất mèo / Nhập viện / Cháy quán), số lần chết, nút chơi lại lớn.
 
 ---
 
@@ -317,7 +322,11 @@ Mỗi khách có thuộc tính: `patience`, `type` (thường / quỵt / nhây /
 | 3 | Thêm khách quỵt |
 | 4 | Thêm mèo |
 | 5 | Thêm nhóm giang hồ |
-| 6+ | Sự cố bếp, khách nhây, thanh tra, kết hợp nhiều tình huống |
+| 6 | Chảo bốc cháy |
+| 7 | Shipper giục đơn |
+| 8 | Hết nguyên liệu |
+| 9 | Mất điện |
+| 10+ | Thanh tra vệ sinh, kết hợp nhiều tình huống (sự cố nặng không chồng nhau: cháy / mất điện / giang hồ / thanh tra hoãn nhau) |
 
 Quy tắc:
 1. Mỗi tình huống mới được **giới thiệu riêng** trước khi trộn với tình huống khác.

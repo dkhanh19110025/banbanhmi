@@ -19,6 +19,11 @@ export class MusicDirector {
   private runners = new Set<number>();
   private audit = false;
   private angerHigh = false;
+  private fireSmoke = false;
+  private fireBurning = false;
+  private powerOut = false;
+  private shipper = false;
+  private inspector = false;
   private over = false;
 
   constructor(bus: EventBus) {
@@ -48,6 +53,16 @@ export class MusicDirector {
           recompute();
         }
       }),
+      bus.on('fire:warning', () => ((this.fireSmoke = true), recompute())),
+      bus.on('fire:burning', () => ((this.fireBurning = true), recompute())),
+      bus.on('fire:out', () => ((this.fireSmoke = false), (this.fireBurning = false), recompute())),
+      bus.on('power:out', () => ((this.powerOut = true), recompute())),
+      bus.on('power:restored', () => ((this.powerOut = false), recompute())),
+      bus.on('shipper:arrived', () => ((this.shipper = true), recompute())),
+      bus.on('shipper:delivered', () => ((this.shipper = false), recompute())),
+      bus.on('shipper:failed', () => ((this.shipper = false), recompute())),
+      bus.on('inspector:warning', () => ((this.inspector = true), recompute())),
+      bus.on('inspector:result', () => ((this.inspector = false), recompute())),
       bus.on('game:over', () => {
         this.over = true;
         this.level = 'off';
@@ -63,8 +78,19 @@ export class MusicDirector {
   private recompute(): void {
     if (this.over) return;
     let next: MusicLevel = 'calm';
-    if (this.gang || this.catGrabbed) next = 'danger';
-    else if (this.runners.size > 0 || this.audit || this.angerHigh || this.catAlert) next = 'alert';
+    if (this.gang || this.catGrabbed || this.fireBurning) next = 'danger';
+    else if (
+      this.runners.size > 0 ||
+      this.audit ||
+      this.angerHigh ||
+      this.catAlert ||
+      this.fireSmoke ||
+      this.powerOut ||
+      this.shipper ||
+      this.inspector
+    ) {
+      next = 'alert';
+    }
     if (next === this.level) return;
     this.level = next;
     this.bus.emit('music:level', { level: next });

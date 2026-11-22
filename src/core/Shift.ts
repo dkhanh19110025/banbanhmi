@@ -1,19 +1,25 @@
 import type * as THREE from 'three';
+import { pick } from './Random';
 import { getShiftConfig, type ShiftConfig, type ShiftPlan } from '../data/difficulty';
 import { DIALOGUES, fillLine } from '../data/dialogues';
 import { formatMoney } from '../data/menu';
 import { Boss } from '../entities/Boss';
 import { CatSystem } from '../systems/CatSystem';
 import { ConsequenceSystem } from '../systems/ConsequenceSystem';
+import { FireSystem } from '../systems/FireSystem';
 import { GangSystem } from '../systems/GangSystem';
+import { InspectorSystem } from '../systems/InspectorSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { MusicDirector } from '../systems/MusicDirector';
 import { PlayerVoice } from '../systems/PlayerVoice';
+import { PowerSystem } from '../systems/PowerSystem';
 import { OrderSystem } from '../systems/OrderSystem';
 import { PaymentSystem } from '../systems/PaymentSystem';
 import { SalarySystem } from '../systems/SalarySystem';
+import { ShipperSystem } from '../systems/ShipperSystem';
 import type { SoundSystem } from '../systems/SoundSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
+import { SupplySystem } from '../systems/SupplySystem';
 import type { WorldLabels } from '../ui/DialogBubble';
 import type { Hud } from '../ui/Hud';
 import type { Notebook } from '../ui/Notebook';
@@ -34,6 +40,8 @@ export interface ShiftDeps {
   notebook: Notebook;
   fx: ScreenFx;
   sound: SoundSystem;
+  /** Số lần đã bị đuổi (ông chủ cà khịa theo số lần) */
+  timesFired: number;
   onFinish: (result: ShiftResult) => void;
 }
 
@@ -58,6 +66,11 @@ export class Shift {
   private readonly boss: Boss | null = null;
   private readonly catSystem: CatSystem | null = null;
   private readonly gangSystem: GangSystem;
+  private readonly fireSystem: FireSystem | null = null;
+  private readonly shipperSystem: ShipperSystem | null = null;
+  private readonly supplySystem: SupplySystem | null = null;
+  private readonly powerSystem: PowerSystem | null = null;
+  private readonly inspectorSystem: InspectorSystem | null = null;
   private readonly music: MusicDirector;
   private readonly voice: PlayerVoice;
   private elapsed = 0;
@@ -87,6 +100,11 @@ export class Shift {
     this.spawn = new SpawnSystem({ bus, cfg, labels, restaurant, scene, interaction, player, cat });
     this.gangSystem = new GangSystem({ bus, cfg, labels, restaurant, scene, interaction, player });
     this.orders = new OrderSystem({ bus, cfg, labels, restaurant, interaction, player, scene });
+    if (cfg.features.fire) this.fireSystem = new FireSystem({ bus, cfg, labels, restaurant, scene, interaction });
+    if (cfg.features.shipper) this.shipperSystem = new ShipperSystem({ bus, cfg, labels, restaurant, scene, interaction, player });
+    if (cfg.features.supply) this.supplySystem = new SupplySystem({ bus, cfg, labels, restaurant, interaction, player });
+    if (cfg.features.blackout) this.powerSystem = new PowerSystem({ bus, cfg, labels, restaurant, scene, interaction, player });
+    if (cfg.features.inspector) this.inspectorSystem = new InspectorSystem({ bus, cfg, labels, restaurant, scene, interaction });
     this.payment = new PaymentSystem({
       bus,
       cfg,
@@ -98,7 +116,11 @@ export class Shift {
 
     // Ông chủ dkhanh có mặt mọi ca: ca 1 chỉ ghé quầy kiểm sổ rồi đi, từ ca 2 đi tuần thật
     const mood = deps.plan.mood;
-    this.boss = new Boss({ bus, cfg, labels, restaurant, player, mood, patrols: cfg.features.boss });
+    let openingLine: string = pick(DIALOGUES.bossGreeting[mood.id]);
+    if (deps.timesFired > 0 && Math.random() < 0.6) {
+      openingLine = fillLine(pick(DIALOGUES.bossGreetingFired), { times: deps.timesFired });
+    }
+    this.boss = new Boss({ bus, cfg, labels, restaurant, player, mood, patrols: cfg.features.boss, openingLine });
     scene.add(this.boss.body.group);
     if (cfg.features.boss) {
       bus.emit('toast', { text: fillLine(DIALOGUES.toastMood, { mood: DIALOGUES.moodNames[mood.id] }), kind: 'info' });
@@ -149,6 +171,11 @@ export class Shift {
     this.payment.update(dt);
     this.catSystem?.update(dt, interactHeld);
     this.gangSystem.update(dt);
+    this.fireSystem?.update(dt);
+    this.shipperSystem?.update(dt);
+    this.supplySystem?.update();
+    this.powerSystem?.update(dt, interactHeld);
+    this.inspectorSystem?.update(dt);
     this.boss?.update(dt);
     this.voice.update(dt);
     hud.setHeld(player.held);
@@ -166,6 +193,11 @@ export class Shift {
     this.boss?.dispose();
     this.catSystem?.dispose();
     this.gangSystem.dispose();
+    this.fireSystem?.dispose();
+    this.shipperSystem?.dispose();
+    this.supplySystem?.dispose();
+    this.powerSystem?.dispose();
+    this.inspectorSystem?.dispose();
     this.music.dispose();
     this.voice.dispose();
     this.interaction.clear();
@@ -182,6 +214,8 @@ export class Shift {
     if (this.finished) return;
     this.finished = true;
     this.deps.hud.setPrompt(null);
+    this.deps.restaurant.setPower(true);
+    this.deps.fx.setDarkness(0);
     this.bus.emit('music:level', { level: 'off' });
     const summary: ShiftSummary = {
       day: this.deps.plan.day,

@@ -4,7 +4,7 @@ import { createServingTray } from './BanhMi';
 import { type AABB, resolveCircleVsBoxes } from './Collision';
 import { Humanoid } from './Humanoid';
 
-export type CarryKind = 'menu' | 'cat';
+export type CarryKind = 'menu' | 'cat' | 'supply';
 
 const KNOCKBACK_DECAY = 6;
 
@@ -43,6 +43,7 @@ export class Player {
   /** Mỗi món dựng sẵn một khay, đổi món chỉ việc bật/tắt */
   private readonly heldBread = new Map<DishId, THREE.Group>();
   private readonly menuMesh: THREE.Mesh;
+  private readonly supplyMesh: THREE.Mesh;
   private readonly knockback = new THREE.Vector3();
   private fallPhase: FallPhase = 'none';
   private fallTimer = 0;
@@ -65,6 +66,15 @@ export class Player {
     this.menuMesh.rotation.x = -0.4;
     this.menuMesh.visible = false;
     this.body.upper.add(this.menuMesh);
+
+    // Túi nguyên liệu mua ở chợ
+    this.supplyMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.46, 0.26),
+      new THREE.MeshStandardMaterial({ color: 0xb7864d }),
+    );
+    this.supplyMesh.position.set(0, 1.12, 0.46);
+    this.supplyMesh.visible = false;
+    this.body.upper.add(this.supplyMesh);
 
     this.carryAnchor.position.set(0, 1.0, 0.45);
     this.body.upper.add(this.carryAnchor);
@@ -124,6 +134,7 @@ export class Player {
   setCarrying(kind: CarryKind | null): void {
     this.carrying = kind;
     this.menuMesh.visible = kind === 'menu';
+    this.supplyMesh.visible = kind === 'supply';
     this.updateArms();
   }
 

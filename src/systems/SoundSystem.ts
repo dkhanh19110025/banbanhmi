@@ -118,7 +118,7 @@ export class SoundSystem {
     bus.on('game:over', (g) => {
       // Nhạc tắt rụp (mục 8)
       this.setMusic('off');
-      if (g.ending === 'hospital') this.play('siren');
+      if (g.ending === 'hospital' || g.ending === 'kitchenFire') this.play('siren');
     });
     bus.on('customer:paid', () => this.play('ding'));
     bus.on('boss:hit', () => this.play('slap'));
@@ -206,6 +206,31 @@ export class SoundSystem {
           this.tone(out, t + i * 0.12, 'sine', 160, 50, 0.12, volume);
           this.noiseBurst(out, t + i * 0.12, 0.08, 1800, volume * 0.8);
         }
+        break;
+      case 'honk':
+        // Bíp bíp của xe máy shipper
+        this.tone(out, t, 'square', 520, 520, 0.12, volume * 0.14);
+        this.tone(out, t + 0.17, 'square', 640, 640, 0.16, volume * 0.14);
+        break;
+      case 'crackle':
+        // Dầu xèo xèo, tí tách
+        for (let i = 0; i < 6; i++) this.noiseBurst(out, t + i * 0.06 + Math.random() * 0.03, 0.04, 3000 + Math.random() * 3000, volume * 0.5);
+        break;
+      case 'splash':
+        this.noiseBurst(out, t, 0.5, 1200, volume * 0.8);
+        this.tone(out, t, 'sine', 220, 70, 0.4, volume * 0.5);
+        break;
+      case 'scrub':
+        for (let i = 0; i < 4; i++) this.noiseBurst(out, t + i * 0.07, 0.06, 2800, volume * 0.3);
+        break;
+      case 'powerDown':
+        this.tone(out, t, 'sawtooth', 320, 50, 0.7, volume * 0.2);
+        break;
+      case 'powerUp':
+        this.tone(out, t, 'square', 180, 820, 0.45, volume * 0.14);
+        break;
+      case 'generator':
+        for (let i = 0; i < 4; i++) this.tone(out, t + i * 0.18, 'sawtooth', 70, 120, 0.15, volume * 0.25);
         break;
       case 'siren':
         // Xe cứu thương: hai nốt luân phiên

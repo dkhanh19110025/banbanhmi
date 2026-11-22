@@ -5,7 +5,12 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { QUALITY } from '../core/Quality';
 import { type AABB, aabbFromCenter } from './Collision';
 
-const DIALOGUE_LABELS = { gangTable: DIALOGUES.gangTableLabel, menu: DIALOGUES.menuLabel };
+const DIALOGUE_LABELS = {
+  gangTable: DIALOGUES.gangTableLabel,
+  menu: DIALOGUES.menuLabel,
+  market: DIALOGUES.marketLabel,
+  generator: DIALOGUES.generatorLabel,
+};
 
 export interface TableSpot {
   /** Số bàn hiển thị (1-based) */
@@ -384,6 +389,48 @@ export class Restaurant {
   /** Chủ quán bước ra từ "nhà trong" (góc tủ lạnh) */
   readonly bossSpawn = at(-8.6, -4.2);
 
+  // --- Sự cố bếp và cửa hàng (ca 6+) ---
+  /** Chỗ đứng để với nắp vung (đặt trên bàn bếp sau) */
+  readonly lidPoint = new THREE.Vector3(KITCHEN.x - 0.8, 0, ROOM.minZ + 1.55);
+  /** Xô nước đặt ở đầu bếp (bẫy: tạt nước vào chảo dầu là bùng cháy) */
+  readonly bucketPoint = new THREE.Vector3(KITCHEN.x + 2.7, 0, ROOM.minZ + 1.55);
+  /** Kệ nguyên liệu trên tường bếp */
+  readonly supplyShelfPoint = new THREE.Vector3(KITCHEN.x + 1.4, 0, ROOM.minZ + 1.55);
+  readonly supplyShelfLabelAnchor = new THREE.Vector3(KITCHEN.x + 1.4, 2.15, ROOM.minZ + 0.4);
+  /** Quầy chợ ngoài vỉa hè (đứng mua ở đây) */
+  readonly marketPoint = new THREE.Vector3(AISLE_X + 3.6, 0, ROOM.maxZ + 3.3);
+  readonly marketLabelAnchor = new THREE.Vector3(AISLE_X + 3.6, 2.2, ROOM.maxZ + 1.7);
+  readonly generatorPoint = new THREE.Vector3(ROOM.maxX - 1.5, 0, 0.5);
+  readonly generatorLabelAnchor = new THREE.Vector3(ROOM.maxX - 0.8, 1.6, 0.5);
+  /** Hộp nến trên quầy thu ngân */
+  readonly candlePoint = new THREE.Vector3(COUNTER.x - 1.6, 0, COUNTER.z - 1.05);
+  readonly candleBox = new THREE.Vector3(COUNTER.x - 1.35, COUNTER_TOP, COUNTER.z);
+  /** Chỗ shipper đứng chờ (cạnh cửa trong) */
+  readonly shipperSpot = new THREE.Vector3(AISLE_X + 1.5, 0, ROOM.maxZ - 0.9);
+  /** Xe thanh tra đỗ ngoài đường */
+  readonly inspectorCarPoint = new THREE.Vector3(AISLE_X - 3.6, 0, ROOM.maxZ + 7);
+  /** Chỗ có thể bị bẩn khi thanh tra tới (sàn bếp, lối đi, trước quầy) */
+  readonly dirtSpots: readonly THREE.Vector3[] = [
+    new THREE.Vector3(KITCHEN.x - 1.4, 0, ROOM.minZ + 1.55),
+    new THREE.Vector3(KITCHEN.x + 1.4, 0, ROOM.minZ + 1.55),
+    new THREE.Vector3(KITCHEN.x, 0, KITCHEN.frontZ + 1.3),
+    new THREE.Vector3(AISLE_X, 0, -6),
+    new THREE.Vector3(AISLE_X, 0, -2),
+    new THREE.Vector3(AISLE_X, 0, 2),
+    new THREE.Vector3(AISLE_X, 0, 6),
+    new THREE.Vector3(COUNTER.x, 0, COUNTER.z + 2.4),
+  ];
+
+  /** Đèn treo (bóng + đèn điểm) để tắt/bật khi mất điện */
+  private readonly lampLights: THREE.PointLight[] = [];
+  private readonly lampLightBase: number[] = [];
+
+  /** Mất điện: tắt hết bóng đèn. Chớp đèn = gọi bật/tắt liên tục. */
+  setPower(on: boolean): void {
+    this.bulbMat.emissiveIntensity = on ? 2 : 0.05;
+    this.lampLights.forEach((light, i) => (light.intensity = on ? this.lampLightBase[i] : 0));
+  }
+
   // --- Bàn lớn cho nhóm giang hồ ---
   readonly bigTableCenter = at(7, -3.2);
   readonly bigTableLabelAnchor = new THREE.Vector3(7 * S, 2.6, -3.2 * S);
@@ -425,6 +472,7 @@ export class Restaurant {
     this.buildLamps();
     this.buildWallDecor();
     this.buildStreet();
+    this.buildIncidentProps();
     this.mergeStatic();
   }
 
@@ -518,6 +566,8 @@ export class Restaurant {
       const light = new THREE.PointLight(0xffc878, 7, 9, 2);
       light.position.set(c.x, 2.5, c.z);
       this.root.add(light);
+      this.lampLights.push(light);
+      this.lampLightBase.push(light.intensity);
     }
   }
 
@@ -553,6 +603,68 @@ export class Restaurant {
     board.position.set(ROOM.minX + 0.02, 2.1, -3.4 * S);
     board.rotation.y = Math.PI / 2;
     this.root.add(board);
+  }
+
+  /** Đạo cụ cho các sự cố: nắp vung, xô nước, kệ nguyên liệu, quầy chợ, máy phát điện, hộp nến */
+  private buildIncidentProps(): void {
+    const kx = KITCHEN.x;
+    const backZ = KITCHEN.backZ;
+
+    // Nắp vung nằm trên bàn bếp sau (sáng bóng, núm đỏ)
+    const lid = this.lidPoint;
+    this.cyl(0.24, 0.24, 0.035, this.steelMat, lid.x, KITCHEN_TOP + 0.02, backZ);
+    this.cyl(0.04, 0.04, 0.05, 0xc0392b, lid.x, KITCHEN_TOP + 0.06, backZ);
+
+    // Xô nước đỏ ở đầu bếp
+    const b = this.bucketPoint;
+    this.cyl(0.22, 0.17, 0.36, 0xe74c3c, b.x, 0.18, b.z - 0.4);
+    this.cyl(0.19, 0.19, 0.012, 0x3498db, b.x, 0.34, b.z - 0.4);
+    this.box(0.4, 0.02, 0.02, 0x555555, b.x, 0.42, b.z - 0.4);
+
+    // Kệ nguyên liệu trên tường bếp: hộp pate, lọ dưa leo, bình gas mini
+    const sx = kx + 1.4;
+    const sz = ROOM.minZ + 0.3;
+    this.box(1.5, 0.04, 0.3, COLORS.woodDark, sx, 1.7, sz);
+    for (const dx of [-0.65, 0.65]) this.box(0.04, 0.2, 0.28, COLORS.woodDark, sx + dx, 1.6, sz);
+    for (let i = 0; i < 3; i++) this.cyl(0.07, 0.07, 0.09, 0x95a5a6, sx - 0.5 + i * 0.16, 1.765, sz);
+    for (let i = 0; i < 2; i++) this.cyl(0.08, 0.08, 0.2, 0x27ae60, sx + 0.05 + i * 0.2, 1.82, sz);
+    this.cyl(0.1, 0.1, 0.26, 0xe67e22, sx + 0.58, 1.85, sz);
+
+    // Quầy chợ ngoài vỉa hè: bàn gỗ, mái che sọc, thùng rau củ, biển CHỢ
+    const m = this.marketPoint;
+    const mz = ROOM.maxZ + 1.7;
+    this.box(2.2, 0.9, 0.8, COLORS.wood, m.x, 0.45, mz);
+    this.box(2.3, 0.06, 0.9, COLORS.woodDark, m.x, 0.93, mz);
+    for (const dx of [-1.05, 1.05]) this.cyl(0.04, 0.04, 2.3, 0x555555, m.x + dx, 1.15, mz - 0.4);
+    const awning = this.box(2.6, 0.06, 1.5, 0x27ae60, m.x, 2.3, mz - 0.15);
+    awning.rotation.x = -0.12;
+    for (let i = 0; i < 6; i += 2) this.box(0.43, 0.065, 1.5, 0xf5f5f5, m.x - 1.08 + i * 0.43, 2.3, mz - 0.15).rotation.x = -0.12;
+    const produce = [0xe74c3c, 0x27ae60, 0xf1c40f, 0x8d5524, 0x2ecc71];
+    produce.forEach((c, i) => {
+      this.box(0.36, 0.14, 0.36, 0xb7864d, m.x - 0.88 + i * 0.44, 1.03, mz);
+      this.box(0.3, 0.08, 0.3, c, m.x - 0.88 + i * 0.44, 1.12, mz);
+    });
+    const marketSign = textPlane([DIALOGUE_LABELS.market], { bg: '#27ae60', fg: '#ffffff', width: 1.1, fontPx: 60, border: '#f1c40f' });
+    marketSign.position.set(m.x, 2.7, mz - 0.1);
+    this.root.add(marketSign);
+
+    // Máy phát điện dựa tường Đông
+    const g = this.generatorPoint;
+    const gx = ROOM.maxX - 0.75;
+    this.box(0.7, 0.62, 0.95, 0xd35400, gx, 0.4, g.z, true);
+    this.box(0.5, 0.18, 0.6, 0x2d3436, gx, 0.8, g.z);
+    this.cyl(0.04, 0.04, 0.4, 0x555555, gx, 1.0, g.z + 0.3);
+    this.box(0.04, 0.3, 0.3, 0xecf0f1, gx - 0.37, 0.45, g.z);
+    for (const dz of [-0.35, 0.35]) this.cyl(0.07, 0.07, 0.06, 0x111111, gx, 0.07, g.z + dz).rotation.z = Math.PI / 2;
+    const genSign = textPlane([DIALOGUE_LABELS.generator], { bg: '#d35400', fg: '#ffffff', width: 1.2, fontPx: 52, border: '#2b1d14' });
+    genSign.position.set(ROOM.maxX - 0.05, 1.7, g.z);
+    genSign.rotation.y = -Math.PI / 2;
+    this.root.add(genSign);
+
+    // Hộp nến trên quầy thu ngân
+    const c = this.candleBox;
+    this.box(0.3, 0.1, 0.2, 0xf5deb3, c.x, c.y + 0.05, c.z);
+    for (let i = 0; i < 3; i++) this.cyl(0.022, 0.022, 0.12, 0xfffbe6, c.x - 0.09 + i * 0.09, c.y + 0.16, c.z);
   }
 
   /** Đường phố trước quán: vỉa hè, lòng đường, xe máy đậu, cây, cột đèn */
@@ -1356,10 +1468,10 @@ export class Restaurant {
   private buildDecor(): void {
     // Bảng hiệu: trong quán dán tường sau (cao trên đầu), ngoài quán trên mặt tiền
     const signOpts = { bg: '#c0392b', fg: '#fff6d5', width: 6, fontPx: 72 };
-    const inner = textPlane(['🥖 TIỆM BÁNH MÌ ĐỊA NGỤC 🔥'], signOpts);
+    const inner = textPlane(['🥖 SHOP BÁN BÁNH MÌ 🔥'], signOpts);
     inner.position.set(3 * S, 3.35, ROOM.minZ + 0.02);
     this.root.add(inner);
-    const outer = textPlane(['🥖 TIỆM BÁNH MÌ ĐỊA NGỤC 🔥'], { ...signOpts, width: 9 });
+    const outer = textPlane(['🥖 SHOP BÁN BÁNH MÌ 🔥'], { ...signOpts, width: 9 });
     outer.position.set(0, DOOR_H + 0.75, ROOM.maxZ + WALL_T + 0.03);
     this.root.add(outer);
 

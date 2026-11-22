@@ -21,6 +21,9 @@ export class ConsequenceSystem {
         if (p.amount > 0) bus.emit('salary:penalty', { amount: p.amount, reason: p.reason });
       }),
       bus.on('cat:scratch', () => fx.shake(0.3)),
+      bus.on('power:darkness', (p) => fx.setDarkness(p.level)),
+      bus.on('fire:burning', () => fx.shake(0.4)),
+      bus.on('fire:out', () => fx.flash()),
       bus.on('customer:ranAway', () => fx.shake(0.25)),
       bus.on('gang:arrived', () => fx.shake(0.6)),
       // Giang hồ đánh: hậu quả nặng = nhập viện, kết thúc ca
@@ -33,6 +36,7 @@ export class ConsequenceSystem {
       bus.on('salary:penalty', (p) => fx.floatText(`-${p.amount}k`)),
       bus.on('game:over', (p) => {
         fx.shake(1.2);
+        if (p.ending === 'kitchenFire') fx.flash();
         fx.bigText(DIALOGUES.endings[p.ending].title, 'fired');
       }),
     );

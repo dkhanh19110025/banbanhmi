@@ -177,6 +177,7 @@ export class Game {
       notebook: this.notebook,
       fx: this.fx,
       sound: this.sound,
+      timesFired: this.save.timesFired,
       onFinish: (r) => this.onShiftFinished(r),
     });
     this.phase = 'playing';

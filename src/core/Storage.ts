@@ -8,6 +8,7 @@ export interface SaveData {
   timesSlapped: number;
   timesCatLost: number;
   timesHospital: number;
+  timesFire: number;
   /** Ca cao nhất được phép chơi tiếp (hết ca N thì mở ca N+1) */
   unlockedDay: number;
 }
@@ -21,6 +22,7 @@ const DEFAULTS: SaveData = {
   timesSlapped: 0,
   timesCatLost: 0,
   timesHospital: 0,
+  timesFire: 0,
   unlockedDay: 1,
 };
 
@@ -28,6 +30,7 @@ const DEFAULTS: SaveData = {
 export function endingCount(save: SaveData, ending: EndingId): number {
   if (ending === 'catLost') return save.timesCatLost;
   if (ending === 'hospital') return save.timesHospital;
+  if (ending === 'kitchenFire') return save.timesFire;
   return save.timesFired;
 }
 
@@ -35,6 +38,7 @@ export function endingCount(save: SaveData, ending: EndingId): number {
 export function recordEnding(save: SaveData, ending: EndingId): void {
   if (ending === 'catLost') save.timesCatLost++;
   else if (ending === 'hospital') save.timesHospital++;
+  else if (ending === 'kitchenFire') save.timesFire++;
   else save.timesFired++;
 }
 

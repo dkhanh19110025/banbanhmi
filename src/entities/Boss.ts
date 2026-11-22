@@ -26,7 +26,9 @@ export type BossState =
   | 'RETURNING'
   | 'AWAY'
   | 'ARRIVING'
-  | 'LEAVING';
+  | 'LEAVING'
+  // Hỏi sổ bất ngờ ngay chỗ đang đứng (lúc thấy bạn đang bưng đồ)
+  | 'AMBUSH';
 
 /** Trạng thái chủ quán đang thong thả (có thể đi tuần, bắt quả tang, nghe tiếng dép) */
 const CALM_STATES: ReadonlySet<BossState> = new Set([
@@ -36,7 +38,10 @@ const CALM_STATES: ReadonlySet<BossState> = new Set([
   'RETURNING',
   'ARRIVING',
   'LEAVING',
+  'AMBUSH',
 ]);
+/** Chủ quán đang đi tuần thong thả: lúc này mới nhảy ra hỏi sổ bất ngờ */
+const AMBUSH_FROM: ReadonlySet<BossState> = new Set(['PATROLLING', 'STOPPED', 'RETURNING']);
 const WALKING_STATES: ReadonlySet<BossState> = new Set([
   'PATROLLING',
   'RETURNING',
@@ -73,6 +78,8 @@ export interface BossDeps {
   mood: BossMood;
   /** true: đi tuần, có thanh bực (ca 2+). false: chỉ ghé quầy kiểm sổ rồi đi (ca 1) */
   patrols: boolean;
+  /** Câu chào đầu ca (theo tâm trạng, cà khịa theo số lần bị đuổi) — nói một lần khi mới xuất hiện */
+  openingLine: string | null;
 }
 
 export class Boss {
@@ -99,6 +106,8 @@ export class Boss {
   private pathIndex = 0;
   /** Chế độ ghé kiểm sổ: bao lâu nữa thì tới lần ghé kế tiếp */
   private visitWait: number;
+  private greeted = false;
+  private ambushCooldown = 0;
 
   constructor(deps: BossDeps) {
     this.deps = deps;
@@ -145,7 +154,14 @@ export class Boss {
         this.auditActive = false;
         // Chưa có gì để kiểm thì đi, lát quay lại sớm hơn
         this.visitWait = cfg.auditRetrySec;
-        if (this.fsm.state === 'CHECKING_BOOK') this.speech.say(pick(DIALOGUES.bossNothingToAudit), 2);
+        if (this.fsm.state === 'CHECKING_BOOK' || this.fsm.state === 'AMBUSH') {
+          this.speech.say(pick(DIALOGUES.bossNothingToAudit), 2);
+        }
+      }),
+      // Shipper chửi quán / thanh tra lập biên bản → ông chủ bực
+      bus.on('shipper:failed', () => this.addAnger(cfg.angerShipper, DIALOGUES.ratingReasonShipper)),
+      bus.on('inspector:result', (r) => {
+        if (!r.ok) this.addAnger(cfg.angerInspector, DIALOGUES.ratingReasonInspector);
       }),
       bus.on('audit:result', (r) => {
         this.auditActive = false;
@@ -189,7 +205,23 @@ export class Boss {
 
     // Bắt quả tang đứng không
     this.idleCooldown -= dt;
+    this.ambushCooldown -= dt;
     const dist = distanceXZ(player.position, this.position);
+
+    // Thấy bạn đang bưng đồ thì thỉnh thoảng nhảy ra hỏi sổ bất ngờ
+    if (
+      this.deps.patrols &&
+      cfg.bossAmbushPerSec > 0 &&
+      this.ambushCooldown <= 0 &&
+      !this.auditActive &&
+      this.pending.length === 0 &&
+      AMBUSH_FROM.has(this.fsm.state) &&
+      player.held !== null &&
+      dist <= cfg.bossAmbushRange &&
+      Math.random() < cfg.bossAmbushPerSec * dt
+    ) {
+      this.fsm.go('AMBUSH');
+    }
     if (
       this.deps.patrols &&
       CALM_STATES.has(this.fsm.state) &&
@@ -290,6 +322,13 @@ export class Boss {
     return best;
   }
 
+  /** Chào đầu ca một lần, ngay lúc ông chủ xuất hiện */
+  private greetOnce(): void {
+    if (this.greeted || !this.deps.openingLine) return;
+    this.greeted = true;
+    this.speech.say(this.deps.openingLine, 4);
+  }
+
   /** Hiện/ẩn ông chủ (và bảng tên) khi ra vào quán */
   private setOnStage(on: boolean): void {
     this.body.group.visible = on;
@@ -359,6 +398,7 @@ export class Boss {
           this.visitWait = randomIn(cfg.auditIntervalSec);
           this.body.group.position.copy(restaurant.doorOutside);
           this.setOnStage(true);
+          this.greetOnce();
           this.startPath(this.laneToCounter());
         },
         update: (_b, dt) => {
@@ -393,8 +433,25 @@ export class Boss {
         },
       },
 
+      // Hỏi sổ bất ngờ ngay tại chỗ: bạn phải bỏ việc đang làm, mở sổ (N) ghi cho đúng trong vài giây
+      AMBUSH: {
+        enter: () => {
+          this.ambushCooldown = cfg.bossAmbushCooldownSec;
+          this.body.faceDirection(player.position.x - this.position.x, player.position.z - this.position.z);
+          this.auditActive = true;
+          bus.emit('audit:request', {});
+          this.speech.say(pick(DIALOGUES.bossAmbush), 2.5);
+        },
+        update: () => {
+          const t = this.fsm.timeInState;
+          const done = !this.auditActive && t >= AUDIT_MIN_STAY_SEC;
+          if (done || t >= cfg.auditWarningSec + AUDIT_EXTRA_WAIT_SEC) this.fsm.go('RETURNING');
+        },
+      },
+
       RETURNING: {
         enter: () => {
+          this.greetOnce();
           this.routeIndex = this.nearestWaypoint();
           this.target = route[this.routeIndex].pos;
         },
@@ -487,6 +544,7 @@ export class Boss {
             getUpSec: cfg.slapGetUpSec,
           });
           bus.emit('boss:hit', { amount, reason });
+          this.speech.say(pick(DIALOGUES.bossAfterSlap), 2.5);
           this.body.armsLocked = true;
           // Mất mèo: đánh xong đuổi việc (hậu quả nặng, kết thúc ca)
           const fatal = hits.find((h) => h.ending);
@@ -505,7 +563,6 @@ export class Boss {
         exit: () => {
           this.body.armsLocked = false;
           this.body.arms[1].rotation.set(0, 0, 0);
-          this.speech.say(pick(DIALOGUES.bossAfterSlap), 1.5);
         },
       },
     };

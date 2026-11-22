@@ -138,7 +138,7 @@ export class ReviewScreen {
   showGameOver(ending: EndingId, s: ShiftSummary, save: SaveData, onRetry: () => void): void {
     const info = DIALOGUES.endings[ending];
     const times = endingCount(save, ending);
-    const totalDeaths = save.timesFired + save.timesCatLost + save.timesHospital;
+    const totalDeaths = save.timesFired + save.timesCatLost + save.timesHospital + save.timesFire;
     const context = deathContextLine(s, totalDeaths);
     this.render(
       `fired ending-${ending}`,
@@ -149,7 +149,7 @@ export class ReviewScreen {
        <div class="rv-stats">
          <div>💀 Tổng số lần toang<b>${totalDeaths}</b></div>
          <div>🏆 Ca xa nhất<b>${save.bestDay}</b></div>
-         <div>🔥 Bị đuổi / 🐈 Mất mèo / 🚑 Nhập viện<b>${save.timesFired} / ${save.timesCatLost} / ${save.timesHospital}</b></div>
+         <div>🔥 Bị đuổi / 🐈 Mất mèo / 🚑 Nhập viện / 🧯 Cháy quán<b>${save.timesFired} / ${save.timesCatLost} / ${save.timesHospital} / ${save.timesFire}</b></div>
          <div>🖐️ Bị tát ca này<b>${s.slaps}</b></div>
        </div>
        ${this.mistakeList(s.mistakes)}

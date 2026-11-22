@@ -1,5 +1,6 @@
 // MỌI con số cân bằng nằm ở đây. Đơn vị thời gian: giây. Tiền: nghìn đồng.
 import type { Range } from '../core/Random';
+import type { IngredientId } from './menu';
 
 export type MoodId = 'happy' | 'normal' | 'grumpy';
 
@@ -29,6 +30,16 @@ export interface ShiftConfig {
     cat: boolean;
     /** Nhóm giang hồ (ca 5+) */
     gang: boolean;
+    /** Chảo bốc cháy (ca 6+) */
+    fire: boolean;
+    /** Shipper giục đơn (ca 7+) */
+    shipper: boolean;
+    /** Hết nguyên liệu (ca 8+) */
+    supply: boolean;
+    /** Mất điện (ca 9+) */
+    blackout: boolean;
+    /** Thanh tra vệ sinh (ca 10+) */
+    inspector: boolean;
   };
 
   /** Độ dài một ca (giây thật) */
@@ -156,6 +167,71 @@ export interface ShiftConfig {
   gangEntryStaggerSec: number;
   gangSitDelaySec: number;
 
+  // --- Chủ quán hỏi sổ bất ngờ lúc đang bưng đồ ---
+  /** Xác suất mỗi giây (khi chủ quán thấy bạn đang bưng đồ trong tầm) */
+  bossAmbushPerSec: number;
+  bossAmbushRange: number;
+  bossAmbushCooldownSec: number;
+
+  // --- Chảo bốc cháy ---
+  /** Xác suất mỗi lần nướng xong mà chảo bị quên → bốc khói */
+  fireChancePerCook: number;
+  /** Sau khi nướng xong, chảo bốc khói đen sau bấy nhiêu giây (nếu bị bỏ quên) */
+  fireSmokeAfterSec: Range;
+  /** Khói đen báo trước bấy nhiêu giây thì bùng lửa */
+  fireWarnSec: number;
+  /** Lửa bùng → cháy lan hết quán sau bấy nhiêu giây nếu chưa dập */
+  fireSpreadSec: number;
+  /** Tạt nước vào chảo dầu: lửa lan nhanh gấp bấy nhiêu lần */
+  fireWaterSpeedup: number;
+  fireCooldownSec: number;
+  penaltyFireWater: number;
+
+  // --- Shipper giục đơn ---
+  shipperFirstSec: Range;
+  shipperIntervalSec: Range;
+  /** Shipper chờ bấy nhiêu giây rồi bỏ đi chửi */
+  shipperWaitSec: number;
+  shipperHonkSec: number;
+  shipperWalkSpeed: number;
+  ratingShipperOk: number;
+  ratingShipperLate: number;
+  penaltyShipperLate: number;
+  angerShipper: number;
+
+  // --- Hết nguyên liệu ---
+  supplyStart: Record<IngredientId, number>;
+  /** Còn ≤ bấy nhiêu phần thì báo sắp hết (và cho phép ra chợ mua) */
+  supplyLowAt: number;
+  /** Mỗi lần mua về cất kệ được thêm bấy nhiêu phần */
+  supplyRefill: number;
+
+  // --- Mất điện ---
+  /** Xác suất có mất điện trong ca (ngày mưa: chắc chắn) */
+  powerChance: number;
+  powerFirstSec: Range;
+  /** Đèn chớp báo trước bấy nhiêu giây */
+  powerWarnSec: number;
+  /** Tự có điện lại sau bấy nhiêu giây nếu không nổ máy phát */
+  powerOutageSec: number;
+  generatorHoldSec: number;
+  powerDarkness: number;
+  powerCandleDarkness: number;
+
+  // --- Thanh tra vệ sinh ---
+  inspectorChance: number;
+  inspectorArriveSec: Range;
+  /** Từ lúc xe lạ đỗ tới lúc thanh tra bước vào */
+  inspectorWarnSec: number;
+  inspectorDirtSpots: number;
+  inspectorWalkSpeed: number;
+  inspectorLookSec: number;
+  penaltyInspectorFine: number;
+  penaltyInspectorPerSpot: number;
+  ratingInspectorPass: number;
+  ratingInspectorFail: number;
+  angerInspector: number;
+
   // --- Hình phạt ---
   penaltyCatScratch: number;
   penaltyAuditFail: number;
@@ -253,6 +329,52 @@ const BASE: BaseConfig = {
   gangEntryStaggerSec: 0.5,
   gangSitDelaySec: 0.8,
 
+  bossAmbushPerSec: 0.12,
+  bossAmbushRange: 6,
+  bossAmbushCooldownSec: 45,
+
+  fireChancePerCook: 0.25,
+  fireSmokeAfterSec: [4, 8],
+  fireWarnSec: 3.5,
+  fireSpreadSec: 9,
+  fireWaterSpeedup: 3,
+  fireCooldownSec: 25,
+  penaltyFireWater: 10,
+
+  shipperFirstSec: [25, 45],
+  shipperIntervalSec: [45, 70],
+  shipperWaitSec: 35,
+  shipperHonkSec: 2.2,
+  shipperWalkSpeed: 3.2,
+  ratingShipperOk: 0.25,
+  ratingShipperLate: -0.5,
+  penaltyShipperLate: 8,
+  angerShipper: 15,
+
+  supplyStart: { pate: 4, dua: 5, gas: 7 },
+  supplyLowAt: 1,
+  supplyRefill: 6,
+
+  powerChance: 0.8,
+  powerFirstSec: [50, 110],
+  powerWarnSec: 3.5,
+  powerOutageSec: 40,
+  generatorHoldSec: 2.5,
+  powerDarkness: 0.82,
+  powerCandleDarkness: 0.5,
+
+  inspectorChance: 0.85,
+  inspectorArriveSec: [70, 130],
+  inspectorWarnSec: 40,
+  inspectorDirtSpots: 4,
+  inspectorWalkSpeed: 2.4,
+  inspectorLookSec: 4,
+  penaltyInspectorFine: 20,
+  penaltyInspectorPerSpot: 5,
+  ratingInspectorPass: 0.25,
+  ratingInspectorFail: -1,
+  angerInspector: 25,
+
   penaltyCatScratch: 3,
   penaltyAuditFail: 15,
   penaltyEndShiftPerError: 5,
@@ -269,6 +391,16 @@ export const BOSS_FROM_DAY = 2;
 export const RUNAWAY_FROM_DAY = 3;
 export const CAT_FROM_DAY = 4;
 export const GANG_FROM_DAY = 5;
+/** Sự cố bếp và cửa hàng — mỗi ca giới thiệu riêng một thứ (mục 9) */
+export const FIRE_FROM_DAY = 6;
+export const SHIPPER_FROM_DAY = 7;
+export const SUPPLY_FROM_DAY = 8;
+export const BLACKOUT_FROM_DAY = 9;
+export const INSPECTOR_FROM_DAY = 10;
+/** Chủ quán bắt đầu hỏi sổ bất ngờ lúc bạn đang bưng đồ */
+const AMBUSH_FROM_DAY = 3;
+const FIRE_CHANCE_PER_DAY = 0.03;
+const FIRE_CHANCE_MAX = 0.45;
 /** Từ ca này mọi thứ đã có đủ: bắt đầu tăng độ khó chung + sự kiện ngày */
 export const MIXED_FROM_DAY = 6;
 const RUNAWAY_CHANCE_PER_DAY = 0.05;
@@ -337,6 +469,11 @@ export function getShiftConfig(day: number, event: DayEvent | null = null): Shif
       runaway: day >= RUNAWAY_FROM_DAY,
       cat: day >= CAT_FROM_DAY,
       gang: day >= GANG_FROM_DAY,
+      fire: day >= FIRE_FROM_DAY,
+      shipper: day >= SHIPPER_FROM_DAY,
+      supply: day >= SUPPLY_FROM_DAY,
+      blackout: day >= BLACKOUT_FROM_DAY,
+      inspector: day >= INSPECTOR_FROM_DAY,
     },
     spawnIntervalSec: [
       Math.max(MIN_SPAWN_INTERVAL[0], BASE.spawnIntervalSec[0] * factor) * spawnMul,
@@ -354,6 +491,10 @@ export function getShiftConfig(day: number, event: DayEvent | null = null): Shif
       BASE.catSleepDecayPerSec * Math.min(CAT_DECAY_MAX_FACTOR, 1 + CAT_DECAY_GROWTH_PER_DAY * catDays),
     catThiefChance: Math.min(CAT_THIEF_CHANCE_MAX, BASE.catThiefChance + CAT_THIEF_CHANCE_PER_DAY * catDays),
     gangChance: Math.min(1, BASE.gangChance + GANG_CHANCE_PER_DAY * Math.max(0, day - GANG_FROM_DAY)),
+    bossAmbushPerSec: day >= AMBUSH_FROM_DAY ? BASE.bossAmbushPerSec : 0,
+    fireChancePerCook: Math.min(FIRE_CHANCE_MAX, BASE.fireChancePerCook + FIRE_CHANCE_PER_DAY * Math.max(0, day - FIRE_FROM_DAY)),
+    // Ngày mưa: mất điện chắc chắn (mục 5: "hợp với ca mưa")
+    powerChance: event?.id === 'rain' ? 1 : BASE.powerChance,
     angerPerSec: BASE.angerPerSec * Math.min(ANGER_MAX_FACTOR, 1 + ANGER_GROWTH_PER_DAY * mixedDays),
   };
 }

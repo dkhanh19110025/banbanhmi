@@ -1,12 +1,17 @@
-import type { DishId } from '../data/menu';
+import type { DishId, IngredientId } from '../data/menu';
 
-export type EndingId = 'fired' | 'catLost' | 'hospital';
+export type EndingId = 'fired' | 'catLost' | 'hospital' | 'kitchenFire';
 
 export interface Ticket {
   customerId: number;
+  /** 0 = đơn của shipper (ưu tiên) */
   table: number;
   dish: DishId;
+  priority?: boolean;
 }
+
+/** Lý do bếp không dùng được */
+export type KitchenBlock = 'fire' | 'power';
 
 export interface NotebookEntryView {
   table: number;
@@ -31,7 +36,14 @@ export type SoundId =
   | 'sizzle'
   | 'write'
   | 'pop'
-  | 'bell';
+  | 'bell'
+  | 'honk'
+  | 'crackle'
+  | 'splash'
+  | 'scrub'
+  | 'powerDown'
+  | 'powerUp'
+  | 'generator';
 
 /** Mức nhạc nền theo độ nguy hiểm (mục 8) */
 export type MusicLevel = 'off' | 'calm' | 'alert' | 'danger';
@@ -40,10 +52,39 @@ export type CatStatus = 'sleeping' | 'sleepy' | 'waking' | 'wandering' | 'carrie
 
 /** Danh sách mọi sự kiện trong game và dữ liệu đi kèm */
 export interface GameEvents {
-  'order:taken': { customerId: number; table: number; dish: DishId };
+  'order:taken': { customerId: number; table: number; dish: DishId; priority?: boolean };
+  /** Đơn bị hủy (shipper bỏ về) */
+  'order:cancelled': { customerId: number };
   'order:served': { customerId: number; table: number; dish: DishId };
   'orders:changed': { tickets: readonly Ticket[] };
   'kitchen:cooked': { dish: DishId };
+  'kitchen:cookStarted': { dish: DishId };
+  /** Bếp tạm dùng không được (cháy / mất điện) */
+  'kitchen:block': { reason: KitchenBlock; active: boolean };
+
+  // --- Chảo bốc cháy (ca 6+) ---
+  'fire:warning': Record<string, never>;
+  'fire:burning': Record<string, never>;
+  'fire:out': Record<string, never>;
+
+  // --- Shipper giục đơn (ca 7+) ---
+  'shipper:arrived': { dish: DishId };
+  'shipper:delivered': Record<string, never>;
+  'shipper:failed': Record<string, never>;
+
+  // --- Hết nguyên liệu (ca 8+) ---
+  'supply:status': { stock: Readonly<Record<IngredientId, number>>; out: readonly IngredientId[] };
+
+  // --- Mất điện (ca 9+) ---
+  'power:warning': Record<string, never>;
+  'power:out': Record<string, never>;
+  'power:restored': Record<string, never>;
+  /** Độ tối màn hình 0..1 */
+  'power:darkness': { level: number };
+
+  // --- Thanh tra vệ sinh (ca 10+) ---
+  'inspector:warning': { seconds: number; spots: number };
+  'inspector:result': { ok: boolean; remaining: number };
 
   'customer:angryLeave': { customerId: number; table: number };
   'customer:paid': { customerId: number; table: number; dish: DishId; amount: number };

@@ -60,7 +60,6 @@ export class IntroScreen {
       <div class="in-card">
         <div class="in-hero">
           <h1>🥖 ${t.title} 🔥</h1>
-          <div class="in-tagline">${t.tagline}</div>
         </div>
         <p class="in-story">${t.story}</p>
         <div class="in-grid">

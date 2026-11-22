@@ -51,7 +51,6 @@ export const DIALOGUES = {
   /** Tên ông chủ quán, hiện trên đầu và trong lời thoại */
   bossName: 'dkhanh',
   bossSpeaker: 'dkhanh (chủ quán, đứng ở quầy)',
-  bossNothingToAudit: ['Chưa thu đồng nào à? Rảnh ghê.', 'Không có gì để coi hả? Thôi tao đi.'],
   bossFootstep: '🩴 lẹp xẹp',
   bossMurmur: [
     'Hừm…',
@@ -63,7 +62,23 @@ export const DIALOGUES = {
   ],
   bossAuditStart: ['Đâu, đưa sổ coi…', 'Để coi sổ sách sao nè.'],
   bossCharge: ['MÀY ĐỨNG ĐÓ!', 'LẠI ĐÂY!', 'Ê THẰNG KIA!'],
-  bossAfterSlap: ['Lần sau nhớ đó!', 'Làm ăn vậy đó hả?!', 'Trừ lương!'],
+  /** Mỗi cái tát ông chủ đều nói đúng câu này */
+  bossAfterSlap: ['M hả bưởi, làm được việc ko?'],
+  /** Chào đầu ca theo tâm trạng */
+  bossGreeting: {
+    happy: ['Hôm nay tao vui, đừng làm tao hết vui nha.', 'Sáng nay trúng số lẻ, làm cho tử tế!'],
+    normal: ['Làm ăn cho đàng hoàng. Tao canh đó.', 'Nhớ ghi sổ. Tao hỏi bất ngờ đó nha.'],
+    grumpy: ['Vợ tao cằn nhằn cả sáng. Ai sai là ăn đòn!', 'Hôm nay đứa nào sai tao tát liền!'],
+  },
+  /** Thêm vào khi người chơi đã từng bị đuổi (cà khịa theo số lần) */
+  bossGreetingFired: [
+    'Lại là mày hả? Bị đuổi {times} lần rồi mà còn vác mặt tới.',
+    'Mày bị đuổi {times} lần rồi đó. Lần này làm cho ra hồn.',
+    'Trời, lần thứ {times} thấy cái mặt này. Tao thuộc hết lỗi của mày rồi.',
+  ],
+  /** Hỏi sổ bất ngờ lúc người chơi đang bưng đồ */
+  bossAmbush: ['Ê! Bưng đồ đó hả? Bỏ xuống đưa sổ coi!', 'Đứng lại! Tao hỏi sổ bất ngờ nè!', 'Khoan bưng! Sổ sách đâu?!'],
+  bossNothingToAudit: ['Chưa thu đồng nào à? Rảnh ghê.', 'Không có gì để coi hả? Thôi tao đi.'],
   bossIdle: ['Đứng đó làm tượng hả?!', 'Trả lương để mày đứng chơi hả?', 'Rảnh quá ha?'],
   bossPleased: ['Ờ, được.', 'Khá đó.'],
   angerReasonFull: 'Chủ quán bực quá nên tát cho đỡ bực',
@@ -104,8 +119,7 @@ export const DIALOGUES = {
 
   // --- Bảng giới thiệu ---
   intro: {
-    title: 'TIỆM BÁNH MÌ ĐỊA NGỤC',
-    tagline: 'Game phục vụ bánh mì gây cay cú nhất khu phố',
+    title: 'SHOP BÁN BÁNH MÌ',
     story:
       'Bạn vừa được nhận vào làm phục vụ ở một tiệm bánh mì. Lương mỗi ca <b>100k</b>. ' +
       'Mỗi lần sơ suất bị trừ một ít — về <b>0k</b> là <b>bị đuổi việc</b>. ' +
@@ -144,7 +158,36 @@ export const DIALOGUES = {
         from: 'Từ ca 5',
         text: 'Đạp cửa vào, không gọi món, chỉ nhìn. Lấy <b>MENU</b> ở kệ cạnh cửa mang tới trong <b>20 giây</b>. Chậm = <b>nhập viện</b>.',
       },
-      { icon: '🕵️', name: '???', from: 'Sắp có', text: 'Nghe đồn sắp có đoàn kiểm tra vệ sinh…', locked: true },
+      {
+        icon: '🔥',
+        name: 'Chảo bốc cháy',
+        from: 'Từ ca 6',
+        text: 'Nướng xong mà bỏ quên chảo: khói đen bốc lên rồi bùng lửa. Chạy về bếp bấm <kbd>E</kbd> đậy <b>nắp vung</b>. <b>ĐỪNG tạt nước!</b> Cháy lan = <b>cháy quán</b>.',
+      },
+      {
+        icon: '🛵',
+        name: 'Shipper giục đơn',
+        from: 'Từ ca 7',
+        text: 'Nghe còi bíp bíp: có đơn <b>ƯU TIÊN</b>. Làm món đó, mang ra đưa tận tay shipper ở cửa trước khi ổng bỏ đi chửi.',
+      },
+      {
+        icon: '🥫',
+        name: 'Hết nguyên liệu',
+        from: 'Từ ca 8',
+        text: 'Pate, dưa leo, gas có hạn. Thấy "sắp hết" là chạy ra <b>chợ</b> ngoài vỉa hè mua (<kbd>E</kbd>), mang về cất lên kệ bếp.',
+      },
+      {
+        icon: '🌑',
+        name: 'Mất điện',
+        from: 'Từ ca 9',
+        text: 'Đèn chớp là sắp tắt. Ra máy phát <b>giữ</b> <kbd>E</kbd> để nổ máy, hoặc thắp nến cho đỡ tối. Mất điện thì bếp không nướng được.',
+      },
+      {
+        icon: '🕵️',
+        name: 'Thanh tra vệ sinh',
+        from: 'Từ ca 10',
+        text: 'Xe lạ đỗ trước quán! Lau hết các chỗ bẩn 🧽 (<kbd>E</kbd>) trước khi thanh tra bước vào. Còn bẩn là bị phạt tiền.',
+      },
     ],
     controlsTitle: '🎮 Điều khiển',
     controls: [
@@ -230,6 +273,76 @@ export const DIALOGUES = {
   toastGangLeft: 'Giang hồ đi rồi. Thở ra được rồi.',
   menuHint: '📜 Menu',
 
+  // --- Chảo bốc cháy (ca 6+) ---
+  toastFireWarning: '💨 Chảo bốc khói đen! Chạy ra bếp đậy NẮP VUNG (E) — đừng tạt nước!',
+  toastFireBurning: '🔥 CHÁY RỒI!! Đậy nắp vung dập lửa! Không kịp là cháy cả quán!',
+  toastFireOut: '🧯 Dập được lửa rồi. Suýt thành than.',
+  toastFireWater: '💦 Tạt nước vào chảo dầu! Lửa BÙNG TO!',
+  fireIconWarning: '💨 Khói đen! Đậy vung!',
+  fireIconBurning: '🔥 CHÁY! Đậy vung (E)!',
+  actionLid: '🥘 Đậy nắp vung dập lửa',
+  actionWater: '🪣 Tạt nước (ĐỪNG!)',
+  actionWaterEmpty: '🪣 Xô đã hết nước',
+  penaltyReasonFireWater: 'Tạt nước vào chảo dầu đang cháy',
+  lidLabel: '🥘 Nắp vung',
+
+  // --- Shipper giục đơn (ca 7+) ---
+  toastShipperArrived: '🛵 Shipper tới giục đơn! Làm bánh ưu tiên, đưa ra cửa trong {sec} giây!',
+  shipperSay: ['Bíp bíp! Nhanh lên anh ơi!', 'Em còn 10 đơn nữa, nhanh giùm!', 'Trễ là em bị khách chửi á!', 'Bíp! Bíp! Bíp!'],
+  shipperThanks: ['Cảm ơn nha, 5 sao!', 'Ngon! Em đi liền!'],
+  shipperAngry: ['Chậm quá! Em hủy đơn! 1 sao!', 'Trễ cả thế kỷ! Em báo cáo quán!'],
+  shipperIcon: '🛵 Giao gấp!',
+  actionGiveShipper: '🛵 Đưa bánh cho shipper',
+  toastShipperDelivered: '🛵 Shipper hài lòng, để lại 5 sao!',
+  toastShipperFailed: '🛵 Shipper hủy đơn bỏ đi. Review xấu rồi!',
+  reasonShipperLate: 'Shipper chờ lâu, chửi quán trên app',
+  ratingReasonShipper: 'Shipper review xấu',
+  ratingReasonShipperOk: 'Giao hàng nhanh',
+  ticketShipper: '🛵 Shipper (ƯU TIÊN)',
+
+  // --- Hết nguyên liệu (ca 8+) ---
+  toastSupplyLow: '⚠️ {item} sắp hết (còn {n})! Nhớ ra chợ đầu phố mua.',
+  toastSupplyOut: '🚫 HẾT {item}! Chạy ra chợ đầu phố mua!',
+  toastSupplyBought: '🛍️ Mua được {item}. Mang về cất lên kệ bếp!',
+  toastSupplyStocked: '📦 Đã cất {item} lên kệ.',
+  actionBuy: '🛍️ Mua {item} ở chợ',
+  actionStock: '📦 Cất {item} lên kệ',
+  kitchenOut: 'Hết {item}! Không làm được {dish}',
+  shelfLow: '⚠️ Sắp hết: {list}',
+  shelfOut: '🚫 HẾT: {list}',
+  marketIcon: '🛍️ Chợ',
+  marketLabel: 'CHỢ',
+  supplyBagLabel: '🛍️ Túi {item}',
+
+  // --- Mất điện (ca 9+) ---
+  toastPowerWarning: '💡 Đèn chớp chớp… sắp mất điện!',
+  toastPowerOut: '🌑 MẤT ĐIỆN! Ra máy phát GIỮ E để nổ máy, hoặc thắp nến cho đỡ tối.',
+  toastPowerBack: '💡 Có điện lại rồi!',
+  toastPowerGen: '⚙️ Máy phát nổ rồi — có điện!',
+  toastCandle: '🕯️ Thắp nến rồi, đỡ tối (nhưng bếp vẫn chưa chạy).',
+  actionCandle: '🕯️ Thắp nến',
+  actionGenerator: '⚙️ GIỮ E để nổ máy phát',
+  generatorLabel: '⚙️ Máy phát',
+  candleLabel: '🕯️ Nến',
+  kitchenNoPower: '⚡ Mất điện, bếp tắt!',
+
+  // --- Thanh tra vệ sinh (ca 10+) ---
+  toastInspectorWarning: '🚐 Xe lạ đỗ trước quán — THANH TRA VỆ SINH! {sec} giây để dọn {n} chỗ bẩn!',
+  toastInspectorClean: '🧽 Còn {n} chỗ bẩn…',
+  toastInspectorAllClean: '✨ Sạch bong! Ngồi chờ thanh tra thôi.',
+  toastInspectorArrived: '🕵️ Thanh tra bước vào quán!',
+  toastInspectorPass: '✅ Thanh tra gật đầu: quán sạch sẽ!',
+  toastInspectorFail: '❌ Thanh tra lập biên bản: còn {n} chỗ bẩn!',
+  inspectorSay: ['Để tôi kiểm tra vệ sinh…', 'Ghi biên bản nào…', 'Ừm, bếp này…'],
+  inspectorPass: ['Sạch sẽ. Tạm được.', 'Quán này khá đấy.'],
+  inspectorFail: ['Bẩn thế này mà dám bán?! Phạt!', 'Biên bản đây. Nộp phạt!'],
+  actionClean: '🧽 Lau dọn chỗ bẩn',
+  inspectorCarLabel: '🚐 Thanh tra',
+  reasonInspectorFine: 'Thanh tra phạt: còn {n} chỗ bẩn',
+  ratingReasonInspector: 'Thanh tra: quán mất vệ sinh',
+  ratingReasonInspectorOk: 'Quán sạch, thanh tra khen',
+  dirtIcon: '🧽 Bẩn!',
+
   // --- Ending (Game Over) ---
   endings: {
     fired: {
@@ -249,6 +362,15 @@ export const DIALOGUES = {
         { minTimes: 0, line: 'Chủ quán ôm cái ổ mèo khóc một trận rồi đuổi bạn ra đường.' },
         { minTimes: 2, line: 'Mèo thứ {times} biến mất. Chủ quán đã lắp camera chỉ để canh bạn.' },
         { minTimes: 5, line: 'Lần thứ {times}. Cả phường dán tờ rơi "Tìm mèo — đừng thuê nhân viên này".' },
+      ],
+    },
+    kitchenFire: {
+      title: 'CHÁY QUÁN!',
+      name: 'Cháy quán',
+      comments: [
+        { minTimes: 0, line: 'Xe cứu hỏa tới thì quán chỉ còn cái bảng hiệu. Chủ quán khóc tiếng Quảng.' },
+        { minTimes: 2, line: 'Cháy quán lần {times}. Hãng bảo hiểm đã đổi số điện thoại.' },
+        { minTimes: 5, line: 'Lần thứ {times}. Cả phố gọi bạn là "Thánh nướng".' },
       ],
     },
     hospital: {
@@ -289,6 +411,11 @@ export const DIALOGUES = {
     3: 'Khách quỵt! Ăn xong mà ngồi liếc cửa, hiện ❓ là sắp chuồn. Chạy theo bấm E trước khi nó ra khỏi cửa.',
     4: 'Con mèo của quán! Kêu "meo" là sắp dậy. Bế về ổ, GIỮ E vuốt tới khi ngủ. Để khách bế mất mèo = bị đuổi.',
     5: 'Giang hồ! Đạp cửa vào, không gọi món. Lấy MENU ở kệ tím cạnh cửa mang tới trong 20 giây. Chậm = nhập viện.',
+    6: 'Chảo bốc cháy! Nướng xong mà bỏ quên là khói đen bốc lên. Chạy về bếp đậy NẮP VUNG (E). Tạt nước vào dầu là bùng cháy. Cháy lan = cháy quán.',
+    7: 'Shipper giục đơn! Nghe còi bíp bíp là có đơn ƯU TIÊN. Làm xong mang ra đưa shipper ở cửa trước khi ổng chửi trên app.',
+    8: 'Hết nguyên liệu! Pate, dưa leo, gas có hạn. Thấy "sắp hết" thì chạy ra chợ ngoài vỉa hè mua, mang về cất lên kệ bếp.',
+    9: 'Mất điện! Đèn chớp là sắp tắt. Ra máy phát GIỮ E để nổ máy, hoặc thắp nến cho đỡ tối. Mất điện bếp không chạy.',
+    10: 'Thanh tra vệ sinh! Thấy xe lạ đỗ trước quán thì lau hết chỗ bẩn 🧽 trước khi ổng vào. Còn bẩn là bị phạt tiền.',
   },
 
   // --- Menu tạm dừng ---

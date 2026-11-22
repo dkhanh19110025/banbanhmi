@@ -30,6 +30,8 @@ export class Steam {
   private readonly puffs: Puff[] = [];
   private readonly texture = makePuffTexture();
   private spawnTimer = 0;
+  /** Khói đen (chảo cháy) thay vì hơi nước trắng */
+  private dark = false;
 
   constructor(parent: THREE.Object3D, origin: THREE.Vector3) {
     this.root.position.copy(origin);
@@ -40,6 +42,10 @@ export class Steam {
       this.root.add(sprite);
       this.puffs.push({ sprite, age: PUFF_LIFE_SEC, drift: 0 });
     }
+  }
+
+  setDark(dark: boolean): void {
+    this.dark = dark;
   }
 
   /** @param active đang nướng thì bốc khói đều, tắt thì khói tan dần */
@@ -53,6 +59,7 @@ export class Steam {
           free.age = 0;
           free.drift = (Math.random() - 0.5) * 0.4;
           free.sprite.position.set((Math.random() - 0.5) * 0.5, 0, (Math.random() - 0.5) * 0.3);
+          (free.sprite.material as THREE.SpriteMaterial).color.set(this.dark ? 0x1c1c1c : 0xffffff);
           free.sprite.visible = true;
         }
       }
@@ -64,7 +71,7 @@ export class Steam {
       p.sprite.position.y += RISE_SPEED * dt;
       p.sprite.position.x += p.drift * dt;
       p.sprite.scale.setScalar(0.3 + k * 0.6);
-      (p.sprite.material as THREE.SpriteMaterial).opacity = 0.7 * (1 - k);
+      (p.sprite.material as THREE.SpriteMaterial).opacity = (this.dark ? 0.95 : 0.7) * (1 - k);
       if (p.age >= PUFF_LIFE_SEC) p.sprite.visible = false;
     }
   }

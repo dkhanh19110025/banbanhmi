@@ -123,6 +123,8 @@ kbd { background: #fff; color: #222; border-radius: 4px; padding: 1px 7px; font-
 }
 .fx-handprint { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 50%, rgba(231,76,60,0.15) 15%, rgba(192,57,43,0.6) 100%); animation: handprint-fade 1.8s ease-out forwards; }
 @keyframes handprint-fade { 0%, 12% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+.fx-dark { position: absolute; inset: 0; pointer-events: none; --d: 0; background: radial-gradient(circle at 50% 58%, rgba(0,0,10,calc(var(--d) * 0.06)) 6%, rgba(2,3,12,calc(var(--d) * 1.18)) 64%); }
+.ticket.priority { background: #ffe8a3; border-color: #e67e22; font-weight: 800; }
 .boss-name { font-size: 12px; font-weight: 800; color: #fff; background: #c0392b; border: 2px solid #2b1d14; border-radius: 8px; padding: 0 7px; box-shadow: 2px 2px 0 #2b1d14; }
 @keyframes flash { from { opacity: 0.85; } to { opacity: 0; } }
 

@@ -1,4 +1,4 @@
-# CLAUDE.md — Tiệm Bánh Mì Địa Ngục (tên tạm)
+# CLAUDE.md — Shop Bán Bánh Mì
 
 Game 3D chạy trên web, phong cách bựa, nhây, gây cay cú. Người chơi là nhân viên phục vụ ở tiệm bánh mì: canh khách quỵt, dỗ con mèo, đối phó nhóm giang hồ, ghi sổ thanh toán, né chủ quán.
 
