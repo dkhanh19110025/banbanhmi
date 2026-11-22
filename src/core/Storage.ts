@@ -1,6 +1,26 @@
+import type { DayEventId, MoodId } from '../data/difficulty';
 import type { EndingId } from './EventBus';
 
+/** Tên nhân vật dài tối đa bấy nhiêu ký tự */
+export const MAX_NAME_LENGTH = 18;
+
+/** Làm sạch tên: bỏ ký tự điều khiển và <>, gom khoảng trắng, cắt tối đa 18 ký tự (đếm ký tự thật, không phải đơn vị UTF-16) */
+export function cleanName(raw: string): string {
+  const s = raw.replace(/\p{Cc}|[<>]/gu, '').replace(/\s+/g, ' ').trim();
+  return Array.from(s).slice(0, MAX_NAME_LENGTH).join('');
+}
+
+/** Ca đang làm dở: có mặt khi vào ca, xóa khi hết ca / bị đuổi. Mở lại game mà còn → bị mắng vì trốn việc. */
+export interface ActiveShift {
+  day: number;
+  mood: MoodId;
+  event: DayEventId | null;
+}
+
 export interface SaveData {
+  activeShift: ActiveShift | null;
+  /** Tên nhân viên do người chơi đặt (rỗng = chưa đặt) */
+  playerName: string;
   timesFired: number;
   shiftsCompleted: number;
   bestDay: number;
@@ -15,6 +35,8 @@ export interface SaveData {
 
 const KEY = 'tbmdn.save.v1';
 const DEFAULTS: SaveData = {
+  activeShift: null,
+  playerName: '',
   timesFired: 0,
   shiftsCompleted: 0,
   bestDay: 0,
@@ -47,7 +69,11 @@ export function loadSave(): SaveData {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULTS };
     const parsed = JSON.parse(raw) as Partial<SaveData>;
-    return { ...DEFAULTS, ...parsed };
+    const save = { ...DEFAULTS, ...parsed };
+    save.playerName = typeof save.playerName === 'string' ? cleanName(save.playerName) : '';
+    const a = save.activeShift;
+    if (!a || typeof a.day !== 'number' || !Number.isInteger(a.day) || a.day < 1) save.activeShift = null;
+    return save;
   } catch {
     return { ...DEFAULTS };
   }

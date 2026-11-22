@@ -6,6 +6,7 @@ import { DIALOGUES } from '../data/dialogues';
 import { StatusIcon, type WorldLabels } from '../ui/DialogBubble';
 import { FireEffect } from '../world/FireEffect';
 import type { Restaurant } from '../world/Restaurant';
+import type { Player } from '../world/Player';
 import { Steam } from '../world/Steam';
 import type { InteractionSystem } from './InteractionSystem';
 
@@ -21,13 +22,15 @@ export interface FireDeps {
   restaurant: Restaurant;
   scene: THREE.Object3D;
   interaction: InteractionSystem;
+  player: Player;
 }
 
 /**
  * Sự cố — Chảo bốc cháy (từ ca 6).
  * Kích hoạt: nướng xong bánh, có xác suất người chơi "quên" chảo dầu trên bếp lửa.
  * Dấu hiệu: vài giây sau, chảo bốc KHÓI ĐEN + tiếng dầu xèo + thông báo; rồi bùng lửa.
- * Khắc phục: ra bếp, bấm E đậy NẮP VUNG. Xô nước bên cạnh là BẪY: tạt nước vào dầu thì lửa bùng to.
+ * Khắc phục: lấy BÌNH CỨU HỎA ở kệ bếp (E), xịt vào bếp (E), rồi CẤT bình lại (E). Xô nước bên cạnh là BẪY: tạt nước vào dầu thì lửa bùng to.
+ * Quên cất bình mà chủ quán thấy → ăn tát (chỉ tát, không mất gì thêm), xem Boss.
  * Hậu quả: lửa lan hết quán trước khi dập → CHÁY QUÁN (kết thúc ca, chơi lại).
  */
 export class FireSystem {
@@ -36,13 +39,15 @@ export class FireSystem {
   private readonly smoke: Steam;
   private readonly flames: FireEffect;
   private readonly icon: StatusIcon;
-  private readonly lidIcon: StatusIcon;
+  private readonly extIcon: StatusIcon;
   private state: FireState = 'idle';
   /** Đếm ngược tới lúc chảo bốc khói (sau khi nướng xong) */
   private smokeIn: number | null = null;
   private warnLeft = 0;
   private burn = 0;
   private waterUsed = false;
+  /** Bình cứu hỏa đang nằm ở kệ (false = đang được cầm) */
+  private stored = true;
   private cooldown = 0;
   private crackleTimer = 0;
   /** Không chồng sự cố nặng: hoãn khi có giang hồ hoặc đang mất điện */
@@ -51,12 +56,12 @@ export class FireSystem {
 
   constructor(deps: FireDeps) {
     this.deps = deps;
-    const { bus, cfg, labels, restaurant, scene, interaction } = deps;
+    const { bus, cfg, labels, restaurant, scene, interaction, player } = deps;
     this.smoke = new Steam(scene, restaurant.grillPoint);
     this.smoke.setDark(true);
     this.flames = new FireEffect(scene, restaurant.grillPoint);
     this.icon = new StatusIcon(labels, restaurant.kitchenLabelAnchor, 0.7);
-    this.lidIcon = new StatusIcon(labels, restaurant.lidPoint, 1.5);
+    this.extIcon = new StatusIcon(labels, restaurant.extinguisherPoint, 1.5);
 
     this.offs.push(
       bus.on('kitchen:cooked', () => {
@@ -67,12 +72,39 @@ export class FireSystem {
       bus.on('gang:left', () => (this.gangPresent = false)),
       bus.on('power:out', () => (this.powerOut = true)),
       bus.on('power:restored', () => (this.powerOut = false)),
-      // Nắp vung: dập lửa dầu đúng cách
+      // Kệ bình cứu hỏa: lấy bình khi có cháy, cất lại khi xong việc
       interaction.register({
-        position: () => restaurant.lidPoint,
+        position: () => restaurant.extinguisherPoint,
         range: cfg.interactRange + 0.4,
-        action: () => (this.isTrouble ? DIALOGUES.actionLid : null),
-        perform: () => this.extinguish(),
+        action: () => {
+          if (player.carrying === 'extinguisher') return this.isTrouble ? null : DIALOGUES.actionPutExtinguisher;
+          if (!this.isTrouble || !this.stored) return null;
+          return player.handsFull ? DIALOGUES.actionTakeExtinguisherFull : DIALOGUES.actionTakeExtinguisher;
+        },
+        perform: () => {
+          if (player.carrying === 'extinguisher') {
+            if (this.isTrouble) return;
+            player.setCarrying(null);
+            this.stored = true;
+            restaurant.setExtinguisherStored(true);
+            bus.emit('toast', { text: DIALOGUES.toastExtinguisherStowed, kind: 'good' });
+            return;
+          }
+          if (player.handsFull || !this.stored || !this.isTrouble) return;
+          player.setCarrying('extinguisher');
+          this.stored = false;
+          restaurant.setExtinguisherStored(false);
+          bus.emit('toast', { text: DIALOGUES.toastExtinguisherTaken, kind: 'info' });
+        },
+      }),
+      // Bếp đang cháy: cầm bình rồi bấm E để xịt dập lửa
+      interaction.register({
+        position: () => restaurant.grillPoint,
+        range: cfg.interactRange + cfg.stationRangeBonus + 0.5,
+        action: () => (this.isTrouble && player.carrying === 'extinguisher' ? DIALOGUES.actionUseExtinguisher : null),
+        perform: () => {
+          if (this.isTrouble && player.carrying === 'extinguisher') this.extinguish();
+        },
       }),
       // Xô nước: bẫy
       interaction.register({
@@ -107,13 +139,15 @@ export class FireSystem {
         // Lửa lan khắp quán — hậu quả nặng
         this.state = 'dead';
         this.icon.hide();
-        this.lidIcon.hide();
+        this.extIcon.hide();
         bus.emit('game:over', { ending: 'kitchenFire' });
       }
     }
 
     if (this.isTrouble) {
-      this.lidIcon.show(DIALOGUES.lidLabel, null, 'ok blink');
+      // Chỉ nhắc chỗ lấy bình khi bình còn ở kệ
+      if (this.stored) this.extIcon.show(DIALOGUES.extinguisherLabel, null, 'ok blink');
+      else this.extIcon.hide();
       this.crackleTimer -= dt;
       if (this.crackleTimer <= 0) {
         this.crackleTimer = CRACKLE_EVERY_SEC;
@@ -128,7 +162,9 @@ export class FireSystem {
     this.smoke.dispose();
     this.flames.dispose();
     this.icon.dispose();
-    this.lidIcon.dispose();
+    this.extIcon.dispose();
+    // Trả bình về kệ cho ca sau (quán dựng một lần, dùng cho nhiều ca)
+    this.deps.restaurant.setExtinguisherStored(true);
   }
 
   private startSmoking(): void {
@@ -160,7 +196,7 @@ export class FireSystem {
     this.waterUsed = false;
     this.cooldown = cfg.fireCooldownSec;
     this.icon.hide();
-    this.lidIcon.hide();
+    this.extIcon.hide();
     bus.emit('kitchen:block', { reason: 'fire', active: false });
     bus.emit('fire:out', {});
     bus.emit('toast', { text: DIALOGUES.toastFireOut, kind: 'good' });

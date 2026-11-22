@@ -128,9 +128,20 @@ export class Cat {
     return this.isInBed && (this.fsm.state !== 'SLEEPING' || this.sleep < 100);
   }
 
-  /** Khách trộm chỉ bế được mèo đang thức ngoài ổ hoặc đang vươn vai (mục 4: "đang thức/lang thang") */
+  /** Khách trộm bế được mèo đang thức/lang thang, và cả mèo đang ngủ trong ổ (phải đứng rình trước, xem Customer) */
   isStealable(): boolean {
-    return this.fsm.state === 'WANDERING' || this.fsm.state === 'WAKING_UP';
+    const s = this.fsm.state;
+    return s === 'WANDERING' || s === 'WAKING_UP' || s === 'SLEEPING' || s === 'IN_BED';
+  }
+
+  /** Mèo đang ngủ / nằm ổ: khách trộm phải rình vài giây mới dám bế */
+  get isResting(): boolean {
+    return this.fsm.state === 'SLEEPING' || this.fsm.state === 'IN_BED';
+  }
+
+  /** Người chơi đang vuốt mèo (khách trộm thấy là bỏ cuộc) */
+  get isBeingPetted(): boolean {
+    return this.petting;
   }
 
   get status(): CatStatus {
@@ -271,12 +282,11 @@ export class Cat {
   }
 
   private updateIcon(): void {
-    const { cfg } = this.deps;
     const ratio = this.sleep / 100;
     switch (this.fsm.state) {
       case 'SLEEPING':
-        if (ratio < SLEEPY_RATIO) this.icon.show(DIALOGUES.catZzz, (this.sleep - cfg.catWakeAt) / (100 - cfg.catWakeAt), 'warn');
-        else this.icon.show(DIALOGUES.catZzz, null, '');
+        // Không báo còn ngủ được bao lâu: người chơi chỉ biết khi mèo vươn vai và kêu meo
+        this.icon.show(DIALOGUES.catZzz, null, '');
         break;
       case 'WAKING_UP':
         this.icon.show(DIALOGUES.catStretch, null, 'warn blink');

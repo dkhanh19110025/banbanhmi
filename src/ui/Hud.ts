@@ -81,6 +81,8 @@ export class Hud {
     this.catText = el('span', 'hud-cat-text', catRight);
     const catBar = el('div', 'bar', catRight);
     this.catFill = el('div', 'bar-fill', catBar);
+    // Thanh ngủ không hiện: người chơi không được biết mèo còn ngủ bao lâu
+    catBar.style.display = 'none';
 
     this.muteBtn = el('div', 'hud-mute', root);
 
@@ -198,7 +200,7 @@ export class Hud {
       sleeping: 0,
       inBed: 0,
       carried: 0,
-      sleepy: 1,
+      sleepy: 0,
       waking: 2,
       wandering: 2,
       grabbed: 2,
@@ -206,7 +208,8 @@ export class Hud {
     };
     const level = danger[status];
     this.catBox.className = `hud-cat level-${level}`;
-    this.catText.textContent = DIALOGUES.catHud[status];
+    // Không lộ mèo còn ngủ được bao lâu: "sắp dậy" hiện như đang ngủ, thanh ngủ bị ẩn (xem constructor)
+    this.catText.textContent = DIALOGUES.catHud[status === 'sleepy' ? 'sleeping' : status];
     this.catFill.style.width = `${(Math.max(0, Math.min(1, ratio)) * 100).toFixed(0)}%`;
     this.catFill.style.background = ['#2ecc71', '#f1c40f', '#e74c3c'][level];
   }

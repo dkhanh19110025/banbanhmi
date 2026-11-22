@@ -10,6 +10,8 @@ export default defineConfig({
     chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
+        // Tên file tách theo mã băm, không lộ tên module (người ngoài mở F12 chỉ thấy chuỗi ngẫu nhiên)
+        chunkFileNames: 'assets/[hash].js',
         // Tách Three.js riêng: sửa game xong deploy lại, người chơi cũ không phải tải lại Three.js
         manualChunks: (id) => (id.includes('node_modules/three') ? 'three' : undefined),
       },

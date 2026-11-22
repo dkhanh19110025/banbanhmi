@@ -3,8 +3,9 @@ import type { DishId } from '../data/menu';
 import { createServingTray } from './BanhMi';
 import { type AABB, resolveCircleVsBoxes } from './Collision';
 import { Humanoid } from './Humanoid';
+import { STAFF_LOOK } from './Looks';
 
-export type CarryKind = 'menu' | 'cat' | 'supply';
+export type CarryKind = 'menu' | 'cat' | 'supply' | 'extinguisher';
 
 const KNOCKBACK_DECAY = 6;
 
@@ -21,15 +22,7 @@ const easeIn = (t: number): number => t * t;
 const easeInOut = (t: number): number => t * t * (3 - 2 * t);
 
 export class Player {
-  readonly body = new Humanoid({
-    shirt: 0x2f6fd6,
-    pants: 0x2b2b3a,
-    skin: 0xf1c7a1,
-    hat: 0xd63031,
-    apron: true,
-    hair: { style: 'short', color: 0x1b1b1b },
-    shoes: 0xecf0f1,
-  });
+  readonly body = new Humanoid(STAFF_LOOK);
   readonly radius = 0.35;
   held: DishId | null = null;
   /** Đồ không phải món ăn đang cầm: menu (cho giang hồ) hoặc con mèo */
@@ -44,6 +37,7 @@ export class Player {
   private readonly heldBread = new Map<DishId, THREE.Group>();
   private readonly menuMesh: THREE.Mesh;
   private readonly supplyMesh: THREE.Mesh;
+  private readonly extinguisherMesh: THREE.Group;
   private readonly knockback = new THREE.Vector3();
   private fallPhase: FallPhase = 'none';
   private fallTimer = 0;
@@ -75,6 +69,16 @@ export class Player {
     this.supplyMesh.position.set(0, 1.12, 0.46);
     this.supplyMesh.visible = false;
     this.body.upper.add(this.supplyMesh);
+
+    // Bình cứu hỏa ôm trước ngực
+    this.extinguisherMesh = new THREE.Group();
+    const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.46, 12), new THREE.MeshStandardMaterial({ color: 0xd62828 }));
+    const nozzle = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.04), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+    nozzle.position.set(0.07, 0.27, 0);
+    this.extinguisherMesh.add(tank, nozzle);
+    this.extinguisherMesh.position.set(0, 1.15, 0.46);
+    this.extinguisherMesh.visible = false;
+    this.body.upper.add(this.extinguisherMesh);
 
     this.carryAnchor.position.set(0, 1.0, 0.45);
     this.body.upper.add(this.carryAnchor);
@@ -135,6 +139,7 @@ export class Player {
     this.carrying = kind;
     this.menuMesh.visible = kind === 'menu';
     this.supplyMesh.visible = kind === 'supply';
+    this.extinguisherMesh.visible = kind === 'extinguisher';
     this.updateArms();
   }
 

@@ -130,6 +130,9 @@ export class ShipperSystem {
       hat: 0x00b14f,
       hair: { style: 'short', color: 0x1b1b1b },
       shoes: 0x222222,
+      // Shipper hớt hải: mắt híp, miệng há giục đơn
+      eyes: 'happy',
+      mouth: 'open',
     });
     const bag = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.36), new THREE.MeshStandardMaterial({ color: 0x00b14f }));
     bag.position.set(0, 1.1, -0.27);

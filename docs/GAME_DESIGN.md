@@ -154,7 +154,8 @@ SLEEPING → (catSleep thấp) WAKING_UP → WANDERING → (bị bế đi bởi 
 - Vuốt **quá lâu** (tùy chọn nâng cao): mèo cáu, cào người chơi → trừ lương nhẹ.
 
 **Kịch bản mèo bị bế đi**
-1. Một khách (đánh dấu `catThief = true` ở ca nhất định) ăn xong, đi ngang chỗ mèo đang thức/lang thang.
+1. Một khách (đánh dấu `catThief = true` ở ca nhất định) ăn xong, đi tới chỗ mèo. Mèo **đang ngủ cũng bị trộm**: dấu hiệu là khách đứng sát mèo 4 giây (👀🐈) mà không đi; cách khắc phục là **vuốt ve mèo** (khách bỏ cuộc). Mèo thức/lang thang thì bị bế ngay.
+   - Thanh ngủ của mèo **không hiện** cho người chơi; dấu hiệu duy nhất mèo sắp dậy là vươn vai + tiếng meo.
 2. Khách ngó nghiêng, bế mèo, bỏ vào túi/áo rồi đi ra cửa (có thể kèm câu "Ê con mèo xinh quá").
 3. Người chơi có cửa sổ thời gian ngắn để chặn lại.
 
@@ -268,7 +269,7 @@ SLEEPING → (catSleep thấp) WAKING_UP → WANDERING → (bị bế đi bởi 
 | Khách đổi ý sau khi bánh làm xong | Khách vẫy tay gọi lại | Gỡ hành/làm lại | Chậm, trừ điểm |
 | Khách đòi giảm giá | Bong bóng "Quen mà!" | Chiều hoặc từ chối | Chiều → trừ lương; từ chối → rating giảm |
 | ✅ Hết nguyên liệu (pate, dưa leo, gas) — ca 8 | Icon cạn trên kệ, thông báo sắp hết | Chạy ra chợ vỉa hè mua, cất lên kệ bếp | Món cần nguyên liệu đó không làm được, khách chờ cáu |
-| ✅ Chảo bốc cháy — ca 6 | Khói đen, tiếng dầu xèo, thông báo | Đậy nắp vung (tạt nước thì bùng to + trừ lương) | Cháy lan = **cháy quán** (kết thúc ca, chơi lại) |
+| ✅ Chảo bốc cháy — ca 6 | Khói đen, tiếng dầu xèo, thông báo | Lấy **bình cứu hỏa** ở kệ bếp, xịt vào bếp (E), rồi **cất bình lại** (không cất mà chủ quán thấy → ăn tát, chỉ tát). Tạt nước thì bùng to + trừ lương | Cháy lan = **cháy quán** (kết thúc ca, chơi lại) |
 | Bánh nướng quá lửa | Tiếng "xèo" đổi, mùi khét | Lấy ra đúng lúc | Bánh hỏng, mất khách |
 | Chuột/gián trong bếp | Bóng chạy qua, tiếng kêu | Đuổi/đập | Thanh tra thấy → phạt nặng |
 | ✅ Thanh tra vệ sinh — ca 10 | Xe lạ đỗ trước quán, đếm ngược, các chỗ bẩn 🧽 hiện ra | Lau hết chỗ bẩn trước khi thanh tra vào | Phạt tiền theo số chỗ bẩn, mất rating, chủ quán bực |

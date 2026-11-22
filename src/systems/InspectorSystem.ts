@@ -246,6 +246,11 @@ export class InspectorSystem {
       hat: 0x1e272e,
       hair: { style: 'short', color: 0x1b1b1b },
       shoes: 0x111111,
+      // Thanh tra khó tính: mắt lờ đờ soi mói, kính cận, ria mép
+      eyes: 'sleepy',
+      glasses: 0x2d3436,
+      mustache: 0x1b1b1b,
+      brows: 'thick',
     });
     // Cái bảng kẹp giấy kiểm tra
     const clip = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.34, 0.025), new THREE.MeshStandardMaterial({ color: 0xc9a66b }));

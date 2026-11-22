@@ -1,4 +1,4 @@
-import type { SaveData } from '../core/Storage';
+import { cleanName, MAX_NAME_LENGTH, type SaveData, writeSave } from '../core/Storage';
 import { IS_TOUCH } from '../core/Quality';
 import { DIALOGUES, fillLine } from '../data/dialogues';
 
@@ -61,6 +61,13 @@ export class IntroScreen {
         <div class="in-hero">
           <h1>🥖 ${t.title} 🔥</h1>
         </div>
+        <div class="in-welcome">
+          <div class="in-welcome-title">${t.welcome}</div>
+          <label class="in-name">
+            <span>${t.nameLabel}</span>
+            <input class="in-name-input" type="text" maxlength="${MAX_NAME_LENGTH}" placeholder="${t.namePlaceholder}" autocomplete="off" spellcheck="false" />
+          </label>
+        </div>
         <p class="in-story">${t.story}</p>
         <div class="in-grid">
           <section>
@@ -82,6 +89,23 @@ export class IntroScreen {
           ${day > 1 ? `<button class="in-restart">${t.restartFromOne}</button>` : ''}
         </div>
       </div>`;
+    // Ô đặt tên: giá trị gán bằng thuộc tính (không chèn vào HTML nên không dính ký tự lạ)
+    const nameInput = this.root.querySelector<HTMLInputElement>('.in-name-input');
+    if (nameInput) {
+      nameInput.value = save.playerName;
+      nameInput.addEventListener('input', () => {
+        save.playerName = cleanName(nameInput.value);
+        writeSave(save);
+      });
+      // Gõ chữ không được kích hoạt phím tắt của game (M tắt tiếng, Space vào ca...). Enter thì vào ca.
+      nameInput.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+          e.preventDefault();
+          this.start();
+        }
+      });
+    }
     this.root.querySelector('.in-start')?.addEventListener('click', () => this.start());
     this.root.querySelector('.in-restart')?.addEventListener('click', () => {
       this.startFromOne?.();
@@ -92,6 +116,11 @@ export class IntroScreen {
       this.close();
       onStart(1);
     };
+  }
+
+  /** Đóng bảng từ bên ngoài (vào ca bằng đường khác) */
+  dismiss(): void {
+    this.close();
   }
 
   private start(): void {

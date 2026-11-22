@@ -135,6 +135,13 @@ kbd { background: #fff; color: #222; border-radius: 4px; padding: 1px 7px; font-
 .in-hero { background: repeating-linear-gradient(-45deg, #c0392b 0 22px, #b03024 22px 44px); color: #fff6d5; text-align: center; padding: 18px 16px 14px; border-bottom: 4px solid #2b1d14; }
 .in-hero h1 { margin: 0; font-size: clamp(26px, 5vw, 46px); font-weight: 900; letter-spacing: 1px; text-shadow: 4px 4px 0 #2b1d14; transform: rotate(-1.5deg); }
 .in-tagline { margin-top: 6px; font-style: italic; opacity: 0.95; }
+.in-welcome { margin: 14px 22px 0; padding: 10px 14px; text-align: center; background: #2b1d14; color: #ffe9a8; border: 3px solid #c0392b; border-radius: 12px; box-shadow: 4px 4px 0 #000; }
+.in-welcome-title { font-weight: 900; font-size: clamp(16px, 3.4vw, 22px); }
+.in-welcome-title b { color: #ff7a59; }
+.in-name { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 8px; font-weight: 700; }
+.in-name-input { font: inherit; font-size: 16px; width: 16em; max-width: 70vw; padding: 6px 10px; border: 3px solid #ffe9a8; border-radius: 8px; background: #fff8dc; color: #2b1d14; user-select: text; -webkit-user-select: text; }
+.in-name-input:focus { outline: none; border-color: #ff7a59; }
+.player-name { font-size: 12px; font-weight: 800; color: #fff; background: #2f6fd6; border: 2px solid #1b1b1b; border-radius: 8px; padding: 0 7px; box-shadow: 2px 2px 0 #1b1b1b; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 .in-story { margin: 14px 22px 4px; font-size: 15px; line-height: 1.5; }
 .in-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 4px 22px 8px; }
 @media (max-width: 720px) { .in-grid { grid-template-columns: 1fr; } }
@@ -187,6 +194,9 @@ kbd { background: #fff; color: #222; border-radius: 4px; padding: 1px 7px; font-
 .bf-row.bf-event { border-color: #8e44ad; background: #f5eaff; }
 .bf-new { margin-top: 10px; background: #fff3cd; border: 2px dashed #e67e22; border-radius: 10px; padding: 10px 12px; text-align: left; font-size: 14px; line-height: 1.45; }
 .bf-new-title { font-weight: 800; margin-bottom: 4px; color: #d35400; }
+.ds-card h1 { margin: 0 0 8px; font-size: 48px; font-weight: 900; color: #c0392b; text-shadow: 3px 3px 0 #2b1d14; transform: rotate(-2deg); }
+.ds-boss { font-weight: 800; font-size: 18px; color: #2b1d14; }
+.ds-line { margin: 6px 0 4px; font-size: 20px; font-style: italic; font-weight: 700; color: #2b1d14; }
 .bf-start, .ps-card button { font: inherit; font-weight: 900; border: 3px solid #2b1d14; border-radius: 12px; cursor: pointer; box-shadow: 4px 4px 0 #2b1d14; }
 .bf-start { margin-top: 14px; font-size: 22px; padding: 12px 34px; background: #27ae60; color: #fff; }
 .bf-start small, .ps-card button small { font-size: 11px; font-weight: 600; opacity: 0.75; margin-left: 6px; }

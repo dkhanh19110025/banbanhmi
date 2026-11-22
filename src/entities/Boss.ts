@@ -8,6 +8,7 @@ import { formatMoney } from '../data/menu';
 import { SpeechBubble, StatusIcon, type WorldLabel, type WorldLabels } from '../ui/DialogBubble';
 import { distanceXZ } from '../world/Collision';
 import { Humanoid, stepToward } from '../world/Humanoid';
+import { BOSS_LOOK } from '../world/Looks';
 import type { Player } from '../world/Player';
 import type { Restaurant } from '../world/Restaurant';
 
@@ -100,6 +101,10 @@ export class Boss {
   private angerSlapQueued = false;
   private auditActive = false;
   private idleCooldown = 0;
+  /** Đang cháy: cầm bình cứu hỏa là chuyện bình thường, không bị tát */
+  private fireActive = false;
+  private extinguisherSeenSec = 0;
+  private extinguisherCooldown = 0;
   private footstepTimer = 0;
   /** Đường đi theo các điểm (vào quầy / ra cửa) */
   private path: THREE.Vector3[] = [];
@@ -113,17 +118,8 @@ export class Boss {
     this.deps = deps;
     const { bus, cfg, labels, restaurant } = deps;
 
-    // Ông chủ dkhanh: đẹp trai, cao ráo — sơ mi trắng tay dài, tóc vuốt gọn, không bụng bia
-    this.body = new Humanoid({
-      shirt: 0xfafafa,
-      pants: 0x1b2631,
-      skin: 0xe8b98a,
-      hair: { style: 'spiky', color: 0x1b1b1b },
-      shoes: 0x1a1a1a,
-      sleeves: 'long',
-      build: 1.02,
-      goldChain: true,
-    });
+    // Ông chủ dkhanh theo ảnh mẫu: áo khoác đen có mũ trùm, áo thun trắng, quần kaki túi hộp (xem Looks.ts)
+    this.body = new Humanoid(BOSS_LOOK);
     this.body.group.scale.setScalar(1.08);
     this.body.group.position.copy(restaurant.bossSpawn);
 
@@ -135,6 +131,8 @@ export class Boss {
     this.visitWait = randomIn(cfg.auditIntervalSec);
 
     this.offs.push(
+      bus.on('fire:warning', () => (this.fireActive = true)),
+      bus.on('fire:out', () => (this.fireActive = false)),
       bus.on('customer:angryLeave', () => this.addAnger(cfg.angerAngryLeave, DIALOGUES.angerReasonAngry)),
       bus.on('order:served', () => this.relieve(cfg.angerServeRelief)),
       bus.on('customer:ranAway', (p) => {
@@ -232,6 +230,17 @@ export class Boss {
       this.idleCooldown = cfg.idleCatchCooldownSec;
       this.speech.say(pick(DIALOGUES.bossIdle), 2.5);
       this.addAnger(cfg.angerIdle, DIALOGUES.angerReasonIdle);
+    }
+
+    // Cầm bình cứu hỏa đi lung tung (không cháy mà không cất) trước mặt chủ quán → tát. Chỉ tát, không trừ lương.
+    this.extinguisherCooldown -= dt;
+    const messy =
+      player.carrying === 'extinguisher' && !this.fireActive && dist <= cfg.bossSightRange && CALM_STATES.has(this.fsm.state);
+    this.extinguisherSeenSec = messy && this.deps.patrols ? this.extinguisherSeenSec + dt : 0;
+    if (this.extinguisherSeenSec >= cfg.extinguisherSlapSec && this.extinguisherCooldown <= 0) {
+      this.extinguisherSeenSec = 0;
+      this.extinguisherCooldown = cfg.extinguisherSlapCooldownSec;
+      this.queueHit({ amount: 0, reason: DIALOGUES.angerReasonExtinguisher, resetsAnger: false });
     }
 
     // Dấu hiệu báo trước: tiếng dép lê khi lại gần

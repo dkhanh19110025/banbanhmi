@@ -9,6 +9,7 @@ import { type DishId, MENU, getDish } from '../data/menu';
 import { SpeechBubble, StatusIcon, type WorldLabels } from '../ui/DialogBubble';
 import { distanceXZ } from '../world/Collision';
 import { Humanoid, stepToward } from '../world/Humanoid';
+import { GANG_LOOKS } from '../world/Looks';
 import type { Player } from '../world/Player';
 import type { GangSeat, Restaurant } from '../world/Restaurant';
 
@@ -73,18 +74,8 @@ export class Gang {
     const { cfg, restaurant, labels, scene } = deps;
     const size = Math.min(restaurant.gangSeats.length, Math.round(randomIn(cfg.gangSize)));
     for (let i = 0; i < size; i++) {
-      // Áo đen, tay xăm kín, kính râm, đầu trọc
-      const body = new Humanoid({
-        shirt: 0x151515,
-        pants: 0x2d3436,
-        skin: 0xc68642,
-        arms: 0x2c5f7c,
-        sleeves: 'none',
-        build: 1.2,
-        sunglasses: true, // kính gắn vào đầu nên quay theo khi lườm
-        goldChain: true,
-        shoes: 0x111111,
-      });
+      // Chung chất xăm trổ kính râm, mỗi đứa một kiểu (kính gắn vào đầu nên quay theo khi lườm)
+      const body = new Humanoid(GANG_LOOKS[i % GANG_LOOKS.length]);
       if (i === 0) body.group.scale.setScalar(LEADER_SCALE);
       body.group.position.copy(restaurant.doorOutside);
       body.group.position.x += (i - size / 2) * 0.5;

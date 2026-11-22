@@ -10,7 +10,8 @@ import { SpeechBubble, StatusIcon, type WorldLabels } from '../ui/DialogBubble';
 import type { Cat } from './Cat';
 import { distanceXZ } from '../world/Collision';
 import { createServingTray } from '../world/BanhMi';
-import { HAIR_COLORS, HAIR_STYLES, Humanoid, PANTS_COLORS, SLEEVE_STYLES, stepToward } from '../world/Humanoid';
+import { Humanoid, stepToward } from '../world/Humanoid';
+import { uniqueCustomerLook } from '../world/Looks';
 import { type Restaurant, TABLE_TOP_Y, type TableSpot } from '../world/Restaurant';
 
 // Máy trạng thái khách (docs/GAME_DESIGN.md mục 6):
@@ -19,7 +20,8 @@ import { type Restaurant, TABLE_TOP_Y, type TableSpot } from '../world/Restauran
 // WAITING_ORDER / WAITING_FOOD hết kiên nhẫn → LEAVING_ANGRY → GONE
 // Khách quỵt (Tình huống 1): FINISHED → SNEAKING (liếc cửa) → RUNNING_AWAY → GONE
 //   bị nhắc kịp lúc SNEAKING / RUNNING_AWAY → GO_TO_COUNTER → PAYING …
-// Khách trộm mèo (Tình huống 2): trả tiền xong, mèo đang thức → STEALING_CAT → LEAVING_WITH_CAT → GONE
+// Khách trộm mèo (Tình huống 2): trả tiền xong → STEALING_CAT → LEAVING_WITH_CAT → GONE
+//   mèo đang ngủ: tới sát mèo → LURKING_CAT (rình vài giây, người chơi vuốt mèo thì bỏ cuộc → LEAVING) → bế
 //   bị giật lại mèo → LEAVING
 export type CustomerState =
   | 'ENTERING'
@@ -36,6 +38,7 @@ export type CustomerState =
   | 'LEAVING'
   | 'LEAVING_ANGRY'
   | 'STEALING_CAT'
+  | 'LURKING_CAT'
   | 'LEAVING_WITH_CAT'
   | 'GONE';
 
@@ -64,8 +67,6 @@ export interface CustomerDeps {
   canStealCat: () => boolean;
 }
 
-const SHIRTS = [0xe84393, 0x00b894, 0xfdcb6e, 0x6c5ce7, 0xe17055, 0x0984e3, 0x2d3436];
-const SKINS = [0xf1c7a1, 0xe0ac69, 0xc68642, 0x8d5524];
 const ORDERED_SPEAK_SEC = 1.0;
 const FINISHED_PAUSE_SEC = 0.8;
 
@@ -103,15 +104,7 @@ export class Customer {
     this.dish = dish;
     this.deps = deps;
     this.catThief = deps.cfg.features.cat && Math.random() < deps.cfg.catThiefChance;
-    this.body = new Humanoid({
-      shirt: pick(SHIRTS),
-      pants: pick(PANTS_COLORS),
-      skin: pick(SKINS),
-      hair: Math.random() < 0.85 ? { style: pick(HAIR_STYLES), color: pick(HAIR_COLORS) } : undefined,
-      shoes: pick([0x222222, 0xecf0f1, 0xc0392b, 0x795548]),
-      sleeves: pick(SLEEVE_STYLES),
-      build: 0.9 + Math.random() * 0.25,
-    });
+    this.body = new Humanoid(uniqueCustomerLook());
     // Người cao người thấp cho đỡ giống nhau
     this.body.group.scale.setScalar(0.92 + Math.random() * 0.12);
     this.body.group.position.copy(deps.restaurant.doorOutside);
@@ -469,12 +462,36 @@ export class Customer {
           }
           const catPos = cat.position;
           if (distanceXZ(catPos, this.position) <= cfg.catGrabRange) {
-            if (cat.grabBy(this.body.upper, this.id)) this.fsm.go('LEAVING_WITH_CAT');
+            // Mèo đang ngủ: đứng rình trước, mèo thức thì bế luôn
+            if (cat.isResting) this.fsm.go('LURKING_CAT');
+            else if (cat.grabBy(this.body.upper, this.id)) this.fsm.go('LEAVING_WITH_CAT');
             return;
           }
           stepToward(this.body, catPos, cfg.catThiefChaseSpeed * dt);
           this.body.animate(dt, true);
         },
+      },
+
+      // Dấu hiệu báo trước: đứng sát mèo đang ngủ, không đi. Vuốt mèo thì khách bỏ cuộc.
+      LURKING_CAT: {
+        enter: () => {
+          const cat = this.deps.cat;
+          if (cat) this.body.faceDirection(cat.position.x - this.position.x, cat.position.z - this.position.z);
+        },
+        update: (_c, dt) => {
+          const cat = this.deps.cat;
+          this.icon.show(DIALOGUES.thiefLurkIcon, null, 'warn blink');
+          this.body.animate(dt, false);
+          if (!cat || !cat.isStealable() || cat.isBeingPetted) {
+            this.speech.say(DIALOGUES.thiefGiveUp, 1.5);
+            this.fsm.go('LEAVING');
+            return;
+          }
+          if (this.fsm.timeInState >= cfg.catLurkSec && cat.grabBy(this.body.upper, this.id)) {
+            this.fsm.go('LEAVING_WITH_CAT');
+          }
+        },
+        exit: () => this.icon.hide(),
       },
 
       // Ôm mèo ra cửa — cửa sổ ~5 giây để người chơi đuổi theo bấm E

@@ -1,7 +1,9 @@
 import * as THREE from 'three';
-import { planShift, type ShiftPlan } from '../data/difficulty';
+import { planShift, restorePlan, type ShiftPlan } from '../data/difficulty';
+import { DIALOGUES } from '../data/dialogues';
 import { SoundSystem } from '../systems/SoundSystem';
-import { WorldLabels } from '../ui/DialogBubble';
+import { type WorldLabel, WorldLabels } from '../ui/DialogBubble';
+import { DeserterScreen } from '../ui/DeserterScreen';
 import { Hud } from '../ui/Hud';
 import { IntroScreen } from '../ui/IntroScreen';
 import { Notebook } from '../ui/Notebook';
@@ -14,10 +16,12 @@ import { TouchControls } from '../ui/TouchControls';
 import { FollowCamera } from '../world/FollowCamera';
 import { Player } from '../world/Player';
 import { Restaurant } from '../world/Restaurant';
+import { CodeGate } from '../ui/CodeGate';
 import { Input } from './Input';
 import { ADAPTIVE, IS_TOUCH, QUALITY } from './Quality';
 import { Shift, type ShiftResult } from './Shift';
 import { loadSave, recordEnding, type SaveData, writeSave } from './Storage';
+import type { LabHost, ShiftTweaks } from './Tweaks';
 
 const MAX_DT = 0.05;
 /** Chờ chút cho hiệu ứng tát/đuổi diễn xong rồi mới hiện màn kết quả */
@@ -44,16 +48,25 @@ export class Game {
   private readonly player = new Player();
   private readonly input = new Input();
   private readonly labels: WorldLabels;
+  /** Tên nhân viên nổi trên đầu */
+  private readonly nameTag: WorldLabel;
   private readonly hud: Hud;
   private readonly notebook: Notebook;
   private readonly review: ReviewScreen;
   private readonly intro: IntroScreen;
   private readonly briefing: ShiftBriefing;
   private readonly pause: PauseMenu;
+  private readonly deserter: DeserterScreen;
   private readonly fx: ScreenFx;
   private readonly touch: TouchControls | null;
   private readonly orientation: Orientation;
   private readonly sound = new SoundSystem();
+  private readonly uiRoot: HTMLElement;
+  private readonly gate: CodeGate;
+  /** Chế độ thử nghiệm: bật thì không ghi gì vào save, ca chạy theo labTweaks */
+  private labOn = false;
+  private readonly labTweaks: ShiftTweaks = { cfg: {}, features: {}, immortal: false, speed: 1 };
+  private lab: { open(): void } | null = null;
   private readonly save: SaveData = loadSave();
   private shift: Shift | null = null;
   /** Kế hoạch ca đang chơi — chơi lại dùng đúng kế hoạch này */
@@ -91,12 +104,16 @@ export class Game {
     ui.append(labelsRoot, fxRoot);
 
     this.labels = new WorldLabels(labelsRoot);
+    this.nameTag = this.labels.create(this.player.group, 2.1, 'player-name');
     this.hud = new Hud(ui);
     this.notebook = new Notebook(ui);
     this.review = new ReviewScreen(ui);
     this.briefing = new ShiftBriefing(ui);
     this.pause = new PauseMenu(ui);
+    this.deserter = new DeserterScreen(ui);
     this.intro = new IntroScreen(ui);
+    this.uiRoot = ui;
+    this.gate = new CodeGate(ui, () => void this.openLab());
     this.fx = new ScreenFx(fxRoot);
     this.touch = IS_TOUCH ? new TouchControls(ui, this.input) : null;
     // Điện thoại bị xoay dọc giữa ca → tạm dừng (bảng "xoay ngang" che màn)
@@ -114,7 +131,13 @@ export class Game {
 
     window.addEventListener('resize', () => this.resize());
     this.resize();
-    this.showIntro(startDayFromUrl() ?? this.save.unlockedDay);
+    // Mở lại game mà còn ca dở = trốn việc: bắt làm lại ca đó (giữ nguyên tâm trạng + sự kiện), không có đường chơi tiếp
+    const unfinished = this.save.activeShift;
+    if (unfinished && startDayFromUrl() === null) {
+      this.showDeserter(restorePlan(unfinished.day, unfinished.mood, unfinished.event));
+    } else {
+      this.showIntro(startDayFromUrl() ?? this.save.unlockedDay);
+    }
     this.renderer.setAnimationLoop(() => this.frame());
   }
 
@@ -140,10 +163,27 @@ export class Game {
   private showIntro(day: number): void {
     this.endCurrentShift();
     this.phase = 'intro';
+    this.gate.setVisible(true);
     this.player.reset(this.restaurant.playerSpawn);
     this.snapCamera();
     this.sound.setMusic('calm');
-    this.intro.show(day, this.save, (d) => this.beginDay(d));
+    this.refreshName();
+    this.intro.show(day, this.save, (d) => {
+      this.refreshName();
+      this.beginDay(d);
+    });
+  }
+
+  /** Màn mắng trốn việc: chỉ có một nút làm lại ca */
+  private showDeserter(plan: ShiftPlan): void {
+    this.endCurrentShift();
+    this.plan = plan;
+    this.phase = 'briefing';
+    this.player.reset(this.restaurant.playerSpawn);
+    this.snapCamera();
+    this.sound.setMusic('calm');
+    this.gate.setVisible(true);
+    this.deserter.show(plan.day, () => this.startShift(plan));
   }
 
   /** Bốc kế hoạch ca mới rồi hiện thẻ giới thiệu ca */
@@ -154,6 +194,7 @@ export class Game {
     this.phase = 'briefing';
     this.player.reset(this.restaurant.playerSpawn);
     this.snapCamera();
+    this.gate.setVisible(false);
     this.briefing.show(this.plan, () => this.startShift(this.plan));
   }
 
@@ -162,6 +203,9 @@ export class Game {
     this.endCurrentShift();
     this.review.hide();
     this.briefing.hide();
+    this.gate.setVisible(false);
+    // Vào ca từ màn "trốn việc" thì chưa qua màn chính, thẻ tên trên đầu vẫn trống (hiện thành cục đen)
+    this.refreshName();
     this.pause.hide();
     this.sound.setPaused(false);
     this.plan = plan;
@@ -179,8 +223,13 @@ export class Game {
       sound: this.sound,
       timesFired: this.save.timesFired,
       onFinish: (r) => this.onShiftFinished(r),
+      tweaks: this.labOn ? this.labTweaks : null,
     });
     this.phase = 'playing';
+    if (!this.labOn) {
+      this.save.activeShift = { day: plan.day, mood: plan.mood.id, event: plan.event?.id ?? null };
+      writeSave(this.save);
+    }
   }
 
   private retry(): void {
@@ -210,12 +259,54 @@ export class Game {
       onResume: () => this.setPaused(false),
       onRetry: () => this.retry(),
       onToggleSound: () => this.toggleMute(),
+      // Bỏ ca giữa chừng cũng là trốn việc: bị mắng, chỉ còn nút làm lại ca
       onHome: () => {
         this.pause.hide();
         this.sound.setPaused(false);
-        this.showIntro(this.plan.day);
+        // Đang thử nghiệm: về màn chính cho sạch, không bị mắng
+        if (this.labOn) window.location.reload();
+        else this.showDeserter(this.plan);
       },
     });
+  }
+
+  // ---------- Chế độ thử nghiệm (nạp muộn, chỉ sau khi nhập đúng mã) ----------
+
+  private async openLab(): Promise<void> {
+    if (!this.lab) {
+      const mod = await import('../lab/Lab');
+      this.lab = mod.createLab(this.uiRoot, this.labHost());
+    }
+    this.lab.open();
+  }
+
+  private labHost(): LabHost {
+    return {
+      tweaks: this.labTweaks,
+      inShift: () => this.shift !== null && !this.shift.isFinished,
+      start: (plan) => {
+        this.labOn = true;
+        this.intro.dismiss();
+        this.deserter.hide();
+        this.startShift(plan);
+      },
+      endShiftNow: () => this.shift?.endNow(),
+      hold: (on) => {
+        if (on && this.phase === 'playing') {
+          this.phase = 'paused';
+          this.sound.setPaused(true);
+          this.notebook.setOpen(false);
+          return true;
+        }
+        if (!on && this.phase === 'paused') {
+          this.phase = 'playing';
+          this.sound.setPaused(false);
+          return true;
+        }
+        return false;
+      },
+      quit: () => window.location.reload(),
+    };
   }
 
   private toggleMute(): boolean {
@@ -230,7 +321,27 @@ export class Game {
     const day = this.plan.day;
     this.phase = 'ending';
     this.notebook.setOpen(false);
+    if (this.labOn) {
+      // Thử nghiệm: chỉ hiện màn kết quả, không đụng vào save
+      this.pendingScreen =
+        result.kind === 'gameover'
+          ? {
+              delay: FIRED_SCREEN_DELAY,
+              show: () => this.review.showGameOver(result.ending, summary, this.save, () => this.retry()),
+            }
+          : {
+              delay: END_SCREEN_DELAY,
+              show: () =>
+                this.review.showShiftEnd(summary, false, {
+                  onNext: () => this.beginDay(day + 1),
+                  onRetry: () => this.retry(),
+                }),
+            };
+      return;
+    }
     this.save.timesSlapped += summary.slaps;
+    // Ca đã khép lại (hết ca hoặc bị đuổi): không còn ca dở
+    this.save.activeShift = null;
     this.save.bestDay = Math.max(this.save.bestDay, day);
     if (result.kind === 'gameover') {
       const ending = result.ending;
@@ -278,7 +389,11 @@ export class Game {
       if (this.notebook.isOpen) this.player.markActive();
 
       if (this.phase === 'playing') {
-        this.shift?.update(dt, canAct && this.input.wasPressed('KeyE'), canAct && this.input.isDown('KeyE'));
+        const pressed = canAct && this.input.wasPressed('KeyE');
+        const held = canAct && this.input.isDown('KeyE');
+        // Tua nhanh (chỉ khi thử nghiệm): chạy nhiều bước nhỏ cho khỏi lọt va chạm
+        const steps = this.labOn ? this.labTweaks.speed : 1;
+        for (let i = 0; i < steps; i++) this.shift?.update(dt, pressed && i === 0, held);
       }
       if (this.pendingScreen) {
         this.pendingScreen.delay -= dt;
@@ -359,9 +474,16 @@ export class Game {
     this.follow.update(0, this.player.position, this.fx.shakeOffset, true);
   }
 
+  /** Cập nhật tên trên đầu nhân viên theo tên đã đặt */
+  private refreshName(): void {
+    this.nameTag.el.textContent = this.save.playerName || DIALOGUES.defaultName;
+  }
+
   private toggleView(): void {
     const mode = this.follow.toggleMode();
     this.player.body.setHeadVisible(mode === 'third');
+    // Nhìn bằng mắt nhân vật thì khỏi hiện tên trên đầu
+    this.nameTag.setVisible(mode === 'third');
     this.hud.setViewMode(mode);
   }
 

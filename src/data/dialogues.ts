@@ -120,6 +120,9 @@ export const DIALOGUES = {
   // --- Bảng giới thiệu ---
   intro: {
     title: 'SHOP BÁN BÁNH MÌ',
+    welcome: '👋 Chào mừng bạn đến tiệm bánh mì của <b>dkhanh</b>!',
+    nameLabel: 'Tên của bạn',
+    namePlaceholder: 'Nhập tên (tối đa 18 ký tự)',
     story:
       'Bạn vừa được nhận vào làm phục vụ ở một tiệm bánh mì. Lương mỗi ca <b>100k</b>. ' +
       'Mỗi lần sơ suất bị trừ một ít — về <b>0k</b> là <b>bị đuổi việc</b>. ' +
@@ -240,7 +243,9 @@ export const DIALOGUES = {
   cantPickHandsFull: 'Tay đang cầm đồ!',
   thiefSpot: ['Ê con mèo xinh quá…', 'Mèo ai bỏ đây ta?', 'Bé mèo đi với chú nè…'],
   thiefGrab: ['Hehe, của tui rồi!', 'Về nhà với chú nha!'],
-  thiefGiveUp: 'Tiếc ghê…',
+  /** Khách đứng rình mèo đang ngủ (dấu hiệu báo trước, vuốt mèo để khách bỏ cuộc) */
+  thiefLurkIcon: '👀🐈',
+  thiefGiveUp:'Tiếc ghê…',
   thiefCaught: ['Ủa mèo của quán hả? Tưởng mèo hoang…', 'Tui… tui bế thử thôi mà!'],
   toastCatWaking: '🐈 Mèo sắp dậy! Lại ổ giữ E vuốt ve.',
   toastCatWandering: '🐈 Mèo đi lang thang! Bế về ổ (E).',
@@ -274,17 +279,23 @@ export const DIALOGUES = {
   menuHint: '📜 Menu',
 
   // --- Chảo bốc cháy (ca 6+) ---
-  toastFireWarning: '💨 Chảo bốc khói đen! Chạy ra bếp đậy NẮP VUNG (E) — đừng tạt nước!',
-  toastFireBurning: '🔥 CHÁY RỒI!! Đậy nắp vung dập lửa! Không kịp là cháy cả quán!',
+  toastFireWarning: '💨 Chảo bốc khói đen! Lấy BÌNH CỨU HỎA (E) rồi xịt vào bếp — đừng tạt nước!',
+  toastFireBurning: '🔥 CHÁY RỒI!! Xịt bình cứu hỏa dập lửa! Không kịp là cháy cả quán!',
   toastFireOut: '🧯 Dập được lửa rồi. Suýt thành than.',
   toastFireWater: '💦 Tạt nước vào chảo dầu! Lửa BÙNG TO!',
-  fireIconWarning: '💨 Khói đen! Đậy vung!',
-  fireIconBurning: '🔥 CHÁY! Đậy vung (E)!',
-  actionLid: '🥘 Đậy nắp vung dập lửa',
+  fireIconWarning: '💨 Khói đen! Lấy bình cứu hỏa!',
+  fireIconBurning: '🔥 CHÁY! Xịt bình cứu hỏa (E)!',
+  actionTakeExtinguisher: '🧯 Lấy bình cứu hỏa',
+  actionTakeExtinguisherFull: '🧯 Lấy bình cứu hỏa (tay đang bận)',
+  actionPutExtinguisher: '🧯 Cất bình cứu hỏa về chỗ',
+  actionUseExtinguisher: '🧯 Xịt bình dập lửa',
+  toastExtinguisherTaken: '🧯 Cầm bình cứu hỏa rồi. Dập lửa xong nhớ CẤT LẠI, chủ quán thấy bừa bộn là tát đó!',
+  toastExtinguisherStowed: '🧯 Đã cất bình cứu hỏa về chỗ. Gọn gàng.',
+  angerReasonExtinguisher: 'Cầm bình cứu hỏa đi lung tung không cất',
   actionWater: '🪣 Tạt nước (ĐỪNG!)',
   actionWaterEmpty: '🪣 Xô đã hết nước',
   penaltyReasonFireWater: 'Tạt nước vào chảo dầu đang cháy',
-  lidLabel: '🥘 Nắp vung',
+  extinguisherLabel: '🧯 Bình cứu hỏa',
 
   // --- Shipper giục đơn (ca 7+) ---
   toastShipperArrived: '🛵 Shipper tới giục đơn! Làm bánh ưu tiên, đưa ra cửa trong {sec} giây!',
@@ -419,6 +430,13 @@ export const DIALOGUES = {
   },
 
   // --- Menu tạm dừng ---
+  /** Trốn việc giữa ca (tắt game / bấm bỏ ca): chỉ có đúng một nút là làm lại ca */
+  deserter: {
+    title: 'TRỐN VIỆC!',
+    boss: 'dkhanh',
+    line: '"Ai biểu mi trốn việc! Làm lại ca hoặc bị phạt 50k!"',
+    button: '↻ CHƠI LẠI CA {day}',
+  },
   pause: {
     title: '⏸️ NGHỈ MỆT',
     subtitle: 'Chủ quán không thấy đâu. Tranh thủ thở.',
@@ -427,7 +445,7 @@ export const DIALOGUES = {
     sound: 'Âm thanh',
     on: 'Bật',
     off: 'Tắt',
-    home: 'Về màn hình chính',
+    home: 'Bỏ ca (sẽ bị dkhanh mắng)',
   },
 
   // --- Màn cuối ca ---
@@ -483,6 +501,8 @@ export const DIALOGUES = {
   reviewsBad: ['"Chờ 30 phút chưa thấy ai. 1 sao."', '"Nhân viên đi lạc trong quán của chính mình."'],
 
   // Điện thoại
+  /** Tên hiện trên đầu nhân viên khi người chơi chưa đặt tên */
+  defaultName: 'Nhân viên mới',
   installHint: '📲 Muốn mất thanh trình duyệt? Bấm <b>Chia sẻ</b> (ô vuông có mũi tên) → <b>Thêm vào MH chính</b>, rồi mở game từ icon mới.',
   rotateTitle: 'Xoay ngang điện thoại đi sếp!',
   rotateText: 'Quán chật lắm, đứng dọc không vừa. Xoay ngang màn hình để làm ca tiếp.',

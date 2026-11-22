@@ -390,8 +390,10 @@ export class Restaurant {
   readonly bossSpawn = at(-8.6, -4.2);
 
   // --- Sự cố bếp và cửa hàng (ca 6+) ---
-  /** Chỗ đứng để với nắp vung (đặt trên bàn bếp sau) */
-  readonly lidPoint = new THREE.Vector3(KITCHEN.x - 0.8, 0, ROOM.minZ + 1.55);
+  /** Chỗ đứng để lấy / cất bình cứu hỏa (đặt trên bàn bếp sau) */
+  readonly extinguisherPoint = new THREE.Vector3(KITCHEN.x - 0.8, 0, ROOM.minZ + 1.55);
+  /** Các khối của bình cứu hỏa trên bàn bếp: ẩn đi khi người chơi đang cầm */
+  private readonly extinguisherParts: THREE.Mesh[] = [];
   /** Xô nước đặt ở đầu bếp (bẫy: tạt nước vào chảo dầu là bùng cháy) */
   readonly bucketPoint = new THREE.Vector3(KITCHEN.x + 2.7, 0, ROOM.minZ + 1.55);
   /** Kệ nguyên liệu trên tường bếp */
@@ -605,15 +607,24 @@ export class Restaurant {
     this.root.add(board);
   }
 
+  /** Bình cứu hỏa nằm trên bàn bếp (true) hay đang được cầm đi (false) */
+  setExtinguisherStored(stored: boolean): void {
+    for (const part of this.extinguisherParts) part.visible = stored;
+  }
+
   /** Đạo cụ cho các sự cố: nắp vung, xô nước, kệ nguyên liệu, quầy chợ, máy phát điện, hộp nến */
   private buildIncidentProps(): void {
     const kx = KITCHEN.x;
     const backZ = KITCHEN.backZ;
 
     // Nắp vung nằm trên bàn bếp sau (sáng bóng, núm đỏ)
-    const lid = this.lidPoint;
-    this.cyl(0.24, 0.24, 0.035, this.steelMat, lid.x, KITCHEN_TOP + 0.02, backZ);
-    this.cyl(0.04, 0.04, 0.05, 0xc0392b, lid.x, KITCHEN_TOP + 0.06, backZ);
+    const ext = this.extinguisherPoint;
+    this.extinguisherParts.push(
+      this.cyl(0.1, 0.1, 0.46, 0xd62828, ext.x, KITCHEN_TOP + 0.25, backZ),
+      this.cyl(0.05, 0.08, 0.06, 0x222222, ext.x, KITCHEN_TOP + 0.51, backZ),
+      this.box(0.14, 0.04, 0.04, 0x222222, ext.x + 0.07, KITCHEN_TOP + 0.56, backZ),
+      this.cyl(0.103, 0.103, 0.05, 0xf1c40f, ext.x, KITCHEN_TOP + 0.3, backZ),
+    );
 
     // Xô nước đỏ ở đầu bếp
     const b = this.bucketPoint;

@@ -28,6 +28,7 @@ import type { ScreenFx } from '../ui/ScreenFx';
 import type { Player } from '../world/Player';
 import type { Restaurant } from '../world/Restaurant';
 import { type EndingId, EventBus } from './EventBus';
+import type { ShiftTweaks } from './Tweaks';
 
 export interface ShiftDeps {
   /** Ca số mấy + tâm trạng chủ quán + sự kiện ngày (bốc trước, chơi lại giữ nguyên) */
@@ -43,6 +44,8 @@ export interface ShiftDeps {
   /** Số lần đã bị đuổi (ông chủ cà khịa theo số lần) */
   timesFired: number;
   onFinish: (result: ShiftResult) => void;
+  /** Chỉ có khi chạy chế độ thử nghiệm */
+  tweaks?: ShiftTweaks | null;
 }
 
 export type ShiftResult =
@@ -82,7 +85,9 @@ export class Shift {
 
   constructor(deps: ShiftDeps) {
     this.deps = deps;
-    this.cfg = getShiftConfig(deps.plan.day, deps.plan.event);
+    const baseCfg = getShiftConfig(deps.plan.day, deps.plan.event);
+    const tw = deps.tweaks;
+    this.cfg = tw ? { ...baseCfg, ...tw.cfg, features: { ...baseCfg.features, ...tw.features } } : baseCfg;
     const { bus, cfg, interaction } = this;
     const { scene, restaurant, player, labels, hud, notebook, fx, sound } = deps;
 
@@ -100,7 +105,7 @@ export class Shift {
     this.spawn = new SpawnSystem({ bus, cfg, labels, restaurant, scene, interaction, player, cat });
     this.gangSystem = new GangSystem({ bus, cfg, labels, restaurant, scene, interaction, player });
     this.orders = new OrderSystem({ bus, cfg, labels, restaurant, interaction, player, scene });
-    if (cfg.features.fire) this.fireSystem = new FireSystem({ bus, cfg, labels, restaurant, scene, interaction });
+    if (cfg.features.fire) this.fireSystem = new FireSystem({ bus, cfg, labels, restaurant, scene, interaction, player });
     if (cfg.features.shipper) this.shipperSystem = new ShipperSystem({ bus, cfg, labels, restaurant, scene, interaction, player });
     if (cfg.features.supply) this.supplySystem = new SupplySystem({ bus, cfg, labels, restaurant, interaction, player });
     if (cfg.features.blackout) this.powerSystem = new PowerSystem({ bus, cfg, labels, restaurant, scene, interaction, player });
@@ -142,7 +147,10 @@ export class Shift {
         kind: 'bad',
       });
     });
-    bus.on('game:over', (p) => this.finish(p.ending));
+    bus.on('game:over', (p) => {
+      if (this.deps.tweaks?.immortal) return;
+      this.finish(p.ending);
+    });
 
     this.salary.emitStats();
     bus.emit('orders:changed', { tickets: [] });
@@ -182,6 +190,11 @@ export class Shift {
     this.bus.emit('shift:tick', { elapsed: this.elapsed, total: this.cfg.shiftDurationSec });
 
     if (this.elapsed >= this.cfg.shiftDurationSec) this.endOfShift();
+  }
+
+  /** Kết thúc ca ngay như hết giờ (dùng khi thử màn tổng kết) */
+  endNow(): void {
+    if (!this.finished) this.endOfShift();
   }
 
   dispose(): void {

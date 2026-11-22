@@ -149,6 +149,8 @@ export interface ShiftConfig {
   /** Ôm mèo đi ra cửa — tốc độ này cho người chơi ~5 giây đuổi theo */
   catThiefLeaveSpeed: number;
   catGrabRange: number;
+  /** Khách trộm đứng sát mèo đang ngủ bấy nhiêu giây rồi mới bế (dấu hiệu báo trước; vuốt mèo là khách bỏ cuộc) */
+  catLurkSec: number;
 
   // --- Giang hồ ---
   /** Xác suất có nhóm giang hồ ghé trong ca */
@@ -186,6 +188,9 @@ export interface ShiftConfig {
   fireWaterSpeedup: number;
   fireCooldownSec: number;
   penaltyFireWater: number;
+  /** Cầm bình cứu hỏa lang thang trước mặt chủ quán bấy nhiêu giây thì ăn tát (chỉ tát, không trừ lương) */
+  extinguisherSlapSec: number;
+  extinguisherSlapCooldownSec: number;
 
   // --- Shipper giục đơn ---
   shipperFirstSec: Range;
@@ -253,7 +258,7 @@ const BASE: BaseConfig = {
   stationRangeBonus: 1,
 
   firstSpawnDelaySec: 2,
-  spawnIntervalSec: [12, 20],
+  spawnIntervalSec: [15, 20],
   maxCustomers: 4,
   customerWalkSpeed: 2.8,
 
@@ -312,10 +317,11 @@ const BASE: BaseConfig = {
   catWalkSpeed: 1.3,
   catWanderPauseSec: [1, 2.5],
   catDoorBias: 0.35,
-  catThiefChance: 0.3,
+  catThiefChance: 0.4,
   catThiefChaseSpeed: 3.2,
   catThiefLeaveSpeed: 2.6,
   catGrabRange: 0.7,
+  catLurkSec: 4,
 
   gangChance: 0.85,
   gangArriveTimeSec: [40, 120],
@@ -333,13 +339,15 @@ const BASE: BaseConfig = {
   bossAmbushRange: 6,
   bossAmbushCooldownSec: 45,
 
-  fireChancePerCook: 0.25,
+  fireChancePerCook: 0.3,
   fireSmokeAfterSec: [4, 8],
   fireWarnSec: 3.5,
   fireSpreadSec: 9,
   fireWaterSpeedup: 3,
   fireCooldownSec: 25,
   penaltyFireWater: 10,
+  extinguisherSlapSec: 2,
+  extinguisherSlapCooldownSec: 12,
 
   shipperFirstSec: [25, 45],
   shipperIntervalSec: [45, 70],
@@ -383,9 +391,16 @@ const BASE: BaseConfig = {
   ratingSlowCounter: 0.25,
 };
 
-/** Mỗi ca sau khách tới dày hơn chút */
-const SPAWN_SPEEDUP_PER_DAY = 0.9;
-const MIN_SPAWN_INTERVAL: Range = [7, 12];
+/** Khách mới tới cách nhau bao lâu: đổi theo mốc ca, trong cùng mốc thì giữ nguyên */
+const SPAWN_BY_DAY: ReadonlyArray<{ fromDay: number; interval: Range }> = [
+  { fromDay: 1, interval: [15, 20] },
+  { fromDay: 6, interval: [13.5, 17.5] },
+  { fromDay: 8, interval: [12, 15] },
+];
+/** Từ ca này kiên nhẫn của khách cố định (trước đó dùng BASE) */
+const PATIENCE_FIXED_FROM_DAY = 8;
+const PATIENCE_FIXED_ORDER_SEC = 25;
+const PATIENCE_FIXED_FOOD_SEC = 35;
 /** Ca bắt đầu có từng tình huống (mục 9: mỗi ca giới thiệu riêng một thứ) */
 export const BOSS_FROM_DAY = 2;
 export const RUNAWAY_FROM_DAY = 3;
@@ -399,20 +414,8 @@ export const BLACKOUT_FROM_DAY = 9;
 export const INSPECTOR_FROM_DAY = 10;
 /** Chủ quán bắt đầu hỏi sổ bất ngờ lúc bạn đang bưng đồ */
 const AMBUSH_FROM_DAY = 3;
-const FIRE_CHANCE_PER_DAY = 0.03;
-const FIRE_CHANCE_MAX = 0.45;
 /** Từ ca này mọi thứ đã có đủ: bắt đầu tăng độ khó chung + sự kiện ngày */
 export const MIXED_FROM_DAY = 6;
-const RUNAWAY_CHANCE_PER_DAY = 0.05;
-const RUNAWAY_CHANCE_MAX = 0.5;
-/** Ca 6+: kiên nhẫn của khách giảm dần mỗi ca, tối thiểu còn 60% */
-const PATIENCE_DROP_PER_DAY = 0.05;
-const PATIENCE_MIN_FACTOR = 0.6;
-/** Ca 5+: mèo tỉnh nhanh hơn mỗi ca, tối đa gấp đôi */
-const CAT_DECAY_GROWTH_PER_DAY = 0.1;
-const CAT_DECAY_MAX_FACTOR = 2;
-const CAT_THIEF_CHANCE_PER_DAY = 0.03;
-const CAT_THIEF_CHANCE_MAX = 0.45;
 const GANG_CHANCE_PER_DAY = 0.05;
 /** Chủ quán bực nhanh hơn chút mỗi ca sau ca 6 */
 const ANGER_GROWTH_PER_DAY = 0.05;
@@ -450,18 +453,25 @@ export interface ShiftPlan {
   event: DayEvent | null;
 }
 
+/** Dựng lại đúng kế hoạch ca đang dở (tâm trạng + sự kiện) để chơi lại không "đổ xúc xắc" lại */
+export function restorePlan(day: number, moodId: MoodId, eventId: DayEventId | null): ShiftPlan {
+  const mood = BOSS_MOODS.find((m) => m.id === moodId) ?? pickMood();
+  const event = DAY_EVENTS.find((e) => e.id === eventId) ?? null;
+  return { day, mood, event };
+}
+
 export function planShift(day: number): ShiftPlan {
   const event = day >= MIXED_FROM_DAY && Math.random() < DAY_EVENT_CHANCE ? pickWeighted(DAY_EVENTS) : null;
   return { day, mood: pickMood(), event };
 }
 
 export function getShiftConfig(day: number, event: DayEvent | null = null): ShiftConfig {
-  const factor = Math.pow(SPAWN_SPEEDUP_PER_DAY, Math.max(0, day - 1));
   const mixedDays = Math.max(0, day - MIXED_FROM_DAY + 1);
-  const patience =
-    Math.max(PATIENCE_MIN_FACTOR, 1 - PATIENCE_DROP_PER_DAY * mixedDays) * (event?.patienceMultiplier ?? 1);
+  const patienceMul = event?.patienceMultiplier ?? 1;
   const spawnMul = event?.spawnMultiplier ?? 1;
-  const catDays = Math.max(0, day - CAT_FROM_DAY);
+  // Mốc cuối cùng có fromDay <= day
+  const spawn = [...SPAWN_BY_DAY].reverse().find((s) => day >= s.fromDay) ?? SPAWN_BY_DAY[0];
+  const fixedPatience = day >= PATIENCE_FIXED_FROM_DAY;
   return {
     ...BASE,
     features: {
@@ -475,24 +485,14 @@ export function getShiftConfig(day: number, event: DayEvent | null = null): Shif
       blackout: day >= BLACKOUT_FROM_DAY,
       inspector: day >= INSPECTOR_FROM_DAY,
     },
-    spawnIntervalSec: [
-      Math.max(MIN_SPAWN_INTERVAL[0], BASE.spawnIntervalSec[0] * factor) * spawnMul,
-      Math.max(MIN_SPAWN_INTERVAL[1], BASE.spawnIntervalSec[1] * factor) * spawnMul,
-    ],
-    patienceOrderSec: BASE.patienceOrderSec * patience,
-    patienceFoodSec: BASE.patienceFoodSec * patience,
-    patienceCounterSec: BASE.patienceCounterSec * patience,
-    runawayChance: Math.min(
-      RUNAWAY_CHANCE_MAX,
-      (BASE.runawayChance + RUNAWAY_CHANCE_PER_DAY * Math.max(0, day - RUNAWAY_FROM_DAY)) *
-        (event?.runawayMultiplier ?? 1),
-    ),
-    catSleepDecayPerSec:
-      BASE.catSleepDecayPerSec * Math.min(CAT_DECAY_MAX_FACTOR, 1 + CAT_DECAY_GROWTH_PER_DAY * catDays),
-    catThiefChance: Math.min(CAT_THIEF_CHANCE_MAX, BASE.catThiefChance + CAT_THIEF_CHANCE_PER_DAY * catDays),
+    spawnIntervalSec: [spawn.interval[0] * spawnMul, spawn.interval[1] * spawnMul],
+    patienceOrderSec: (fixedPatience ? PATIENCE_FIXED_ORDER_SEC : BASE.patienceOrderSec) * patienceMul,
+    patienceFoodSec: (fixedPatience ? PATIENCE_FIXED_FOOD_SEC : BASE.patienceFoodSec) * patienceMul,
+    // Đứng chờ ở quầy: luôn đúng BASE, không đổi theo ca hay sự kiện
+    patienceCounterSec: BASE.patienceCounterSec,
+    runawayChance: BASE.runawayChance * (event?.runawayMultiplier ?? 1),
     gangChance: Math.min(1, BASE.gangChance + GANG_CHANCE_PER_DAY * Math.max(0, day - GANG_FROM_DAY)),
     bossAmbushPerSec: day >= AMBUSH_FROM_DAY ? BASE.bossAmbushPerSec : 0,
-    fireChancePerCook: Math.min(FIRE_CHANCE_MAX, BASE.fireChancePerCook + FIRE_CHANCE_PER_DAY * Math.max(0, day - FIRE_FROM_DAY)),
     // Ngày mưa: mất điện chắc chắn (mục 5: "hợp với ca mưa")
     powerChance: event?.id === 'rain' ? 1 : BASE.powerChance,
     angerPerSec: BASE.angerPerSec * Math.min(ANGER_MAX_FACTOR, 1 + ANGER_GROWTH_PER_DAY * mixedDays),
