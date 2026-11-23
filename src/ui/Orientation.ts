@@ -2,7 +2,7 @@ import { IS_TOUCH } from '../core/Quality';
 import { DIALOGUES } from '../data/dialogues';
 
 /** Các bảng có thanh cuộn: vẫn cho vuốt dọc bên trong */
-const SCROLLABLE = '.in-card, .rv-card, .bf-card, .ps-card, .notebook';
+const SCROLLABLE = '.in-card, .rv-card, .bf-card, .ps-card, .notebook, .lab-card';
 
 type LockableOrientation = ScreenOrientation & { lock?: (o: 'landscape') => Promise<void> };
 

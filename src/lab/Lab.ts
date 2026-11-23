@@ -82,7 +82,7 @@ interface State {
 const CSS = `
 .lab-root{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.72);pointer-events:auto;font-family:system-ui,sans-serif}
 .lab-root.on{display:flex}
-.lab-card{width:min(720px,100%);max-height:100%;overflow:auto;background:#10151c;color:#d7e3f0;border:2px solid #3b82f6;border-radius:12px;padding:14px 16px;box-shadow:0 8px 30px #000}
+.lab-card{width:min(720px,100%);max-height:100%;overflow:auto;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:#10151c;color:#d7e3f0;border:2px solid #3b82f6;border-radius:12px;padding:14px 16px;box-shadow:0 8px 30px #000}
 .lab-card h2{margin:0 0 4px;font-size:18px;color:#7db4ff}
 .lab-card h3{margin:12px 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8aa0b8}
 .lab-sub{font-size:12px;color:#8aa0b8;margin-bottom:6px}
