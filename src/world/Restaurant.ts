@@ -330,6 +330,7 @@ export class Restaurant {
   readonly tables: TableSpot[] = [];
   /** Dùng chung vật liệu theo màu cho đỡ tốn bộ nhớ GPU */
   private readonly materials = new Map<number, THREE.MeshStandardMaterial>();
+  private readonly leafMats = new Map<number, THREE.MeshStandardMaterial>();
   private readonly woodMat = new THREE.MeshStandardMaterial({
     map: canvasTexture(256, (ctx, rnd) => drawWood(ctx, rnd, 256), 11),
     roughness: 0.65,
@@ -399,9 +400,9 @@ export class Restaurant {
   /** Kệ nguyên liệu trên tường bếp */
   readonly supplyShelfPoint = new THREE.Vector3(KITCHEN.x + 1.4, 0, ROOM.minZ + 1.55);
   readonly supplyShelfLabelAnchor = new THREE.Vector3(KITCHEN.x + 1.4, 2.15, ROOM.minZ + 0.4);
-  /** Quầy chợ ngoài vỉa hè (đứng mua ở đây) */
-  readonly marketPoint = new THREE.Vector3(AISLE_X + 3.6, 0, ROOM.maxZ + 3.3);
-  readonly marketLabelAnchor = new THREE.Vector3(AISLE_X + 3.6, 2.2, ROOM.maxZ + 1.7);
+  /** Quầy tạp hóa trong quán, sát tường cửa (đứng mua ở đây) */
+  readonly marketPoint = new THREE.Vector3(AISLE_X + 6.1, 0, ROOM.maxZ - 1.6);
+  readonly marketLabelAnchor = new THREE.Vector3(AISLE_X + 6.1, 2.2, ROOM.maxZ - 0.55);
   readonly generatorPoint = new THREE.Vector3(ROOM.maxX - 1.5, 0, 0.5);
   readonly generatorLabelAnchor = new THREE.Vector3(ROOM.maxX - 0.8, 1.6, 0.5);
   /** Hộp nến trên quầy thu ngân */
@@ -641,10 +642,10 @@ export class Restaurant {
     for (let i = 0; i < 2; i++) this.cyl(0.08, 0.08, 0.2, 0x27ae60, sx + 0.05 + i * 0.2, 1.82, sz);
     this.cyl(0.1, 0.1, 0.26, 0xe67e22, sx + 0.58, 1.85, sz);
 
-    // Quầy chợ ngoài vỉa hè: bàn gỗ, mái che sọc, thùng rau củ, biển CHỢ
+    // Quầy tạp hóa trong quán, lưng dựa tường cửa: bàn gỗ, mái che sọc, thùng rau củ, biển CHỢ
     const m = this.marketPoint;
-    const mz = ROOM.maxZ + 1.7;
-    this.box(2.2, 0.9, 0.8, COLORS.wood, m.x, 0.45, mz);
+    const mz = ROOM.maxZ - 0.55;
+    this.box(2.2, 0.9, 0.8, COLORS.wood, m.x, 0.45, mz, true);
     this.box(2.3, 0.06, 0.9, COLORS.woodDark, m.x, 0.93, mz);
     for (const dx of [-1.05, 1.05]) this.cyl(0.04, 0.04, 2.3, 0x555555, m.x + dx, 1.15, mz - 0.4);
     const awning = this.box(2.6, 0.06, 1.5, 0x27ae60, m.x, 2.3, mz - 0.15);
@@ -656,7 +657,8 @@ export class Restaurant {
       this.box(0.3, 0.08, 0.3, c, m.x - 0.88 + i * 0.44, 1.12, mz);
     });
     const marketSign = textPlane([DIALOGUE_LABELS.market], { bg: '#27ae60', fg: '#ffffff', width: 1.1, fontPx: 60, border: '#f1c40f' });
-    marketSign.position.set(m.x, 2.7, mz - 0.1);
+    marketSign.position.set(m.x, 2.75, ROOM.maxZ - 0.03);
+    marketSign.rotation.y = Math.PI;
     this.root.add(marketSign);
 
     // Máy phát điện dựa tường Đông
@@ -712,16 +714,21 @@ export class Restaurant {
       [-7 * S, ROOM.maxZ + 3],
       [9 * S, ROOM.maxZ + 3.5],
     ] as const) {
-      this.box(0.35, 1.8, 0.35, 0x6e4527, x, 0.9, z);
-      this.box(1.6, 1.2, 1.6, 0x2e8b57, x, 2.2, z);
-      this.box(1.1, 0.8, 1.1, 0x3cb371, x, 3, z);
+      this.cyl(0.14, 0.2, 2.2, 0x6e4527, x, 1.1, z);
+      // Tán lá: vài khối tròn chồng nhau
+      this.bush(x, 2.5, z, 1.0, 0x2e8b57);
+      this.bush(x + 0.55, 2.3, z + 0.2, 0.7, 0x3cb371);
+      this.bush(x - 0.5, 2.35, z - 0.15, 0.7, 0x3cb371);
+      this.bush(x + 0.1, 3.1, z, 0.65, 0x52c27a);
     }
     // Ghế nhựa đỏ vỉa hè (đặc sản)
     for (const [x, z] of [
       [-5 * S, ROOM.maxZ + 2.2],
       [-5 * S + 0.8, ROOM.maxZ + 2.6],
     ] as const) {
-      this.box(0.4, 0.35, 0.4, 0xe74c3c, x, 0.175, z);
+      // Ghế đẩu nhựa: mặt tròn, chân loe
+      this.cyl(0.2, 0.2, 0.04, 0xe74c3c, x, 0.35, z);
+      this.cyl(0.17, 0.21, 0.31, 0xd63031, x, 0.165, z);
     }
   }
 
@@ -867,6 +874,17 @@ export class Restaurant {
       this.materials.set(color, m);
     }
     return m;
+  }
+
+  /** Bụi lá tròn mặt phẳng (low-poly) */
+  private bush(x: number, y: number, z: number, r: number, color: number): void {
+    const leafMat = this.leafMats.get(color) ?? new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.9 });
+    this.leafMats.set(color, leafMat);
+    const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), leafMat);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    this.root.add(mesh);
   }
 
   /** Khối trụ đặt theo tâm (chai lọ, ghế đẩu...) */
@@ -1491,8 +1509,14 @@ export class Restaurant {
       [ROOM.maxX - 0.6, ROOM.minZ + 0.6],
       [ROOM.minX + 0.6, ROOM.maxZ - 0.6],
     ] as const) {
-      this.box(0.6, 0.6, 0.6, 0x8e5a3c, x, 0.3, z, true);
-      this.box(0.5, 0.9, 0.5, 0x27ae60, x, 1.05, z);
+      // Chậu sành tròn có vành + đất + bụi lá
+      this.cyl(0.3, 0.22, 0.55, 0xc0703a, x, 0.275, z);
+      this.cyl(0.33, 0.33, 0.07, 0xa85d2e, x, 0.55, z);
+      this.cyl(0.28, 0.28, 0.02, 0x3e2a1c, x, 0.575, z);
+      this.colliders.push(aabbFromCenter(x, z, 0.66, 0.66));
+      this.bush(x, 0.9, z, 0.38, 0x27ae60);
+      this.bush(x + 0.18, 1.15, z + 0.05, 0.26, 0x2ecc71);
+      this.bush(x - 0.15, 1.2, z - 0.06, 0.24, 0x52c27a);
     }
   }
 }

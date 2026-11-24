@@ -72,7 +72,9 @@ const SHIN = 0.4;
 const SHOULDER_Y = 1.36;
 const SHOULDER_X = 0.235;
 const UPPER_ARM = 0.29;
-const HEAD_Y = 1.6;
+const HEAD_Y = 1.66;
+/** Đầu to kiểu hoạt hình: mặt dễ đọc từ camera xa. Tóc, mũ, mắt phóng theo */
+const HEAD_SCALE = 1.3;
 /** Độ cao hông khi ngồi ghế (mặt ghế ~0.49) */
 const SEATED_HIP_Y = 0.57;
 
@@ -84,12 +86,21 @@ const ELBOW_REST = -0.18;
 /** Nâng thân khi ngã ngửa để lưng nằm trên sàn */
 const FALL_LIFT = 0.22;
 
-function mat(color: number, roughness = 0.8): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ color, roughness });
+/** 3 nấc sáng cho đổ bóng kiểu hoạt hình (dùng chung mọi nhân vật) */
+const TOON_RAMP = (() => {
+  const t = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 215, 215, 215, 255, 255, 255, 255, 255]), 3, 1);
+  t.minFilter = THREE.NearestFilter;
+  t.magFilter = THREE.NearestFilter;
+  t.needsUpdate = true;
+  return t;
+})();
+
+function mat(color: number): THREE.MeshToonMaterial {
+  return new THREE.MeshToonMaterial({ color, gradientMap: TOON_RAMP });
 }
 
-function mesh(geo: THREE.BufferGeometry, color: number, roughness?: number): THREE.Mesh {
-  const m = new THREE.Mesh(geo, mat(color, roughness));
+function mesh(geo: THREE.BufferGeometry, color: number): THREE.Mesh {
+  const m = new THREE.Mesh(geo, mat(color));
   m.castShadow = true;
   return m;
 }
@@ -161,14 +172,14 @@ export class Humanoid {
     for (const side of [-1, 1]) {
       const hip = new THREE.Group();
       hip.position.set(side * HIP_X, HIP_Y, 0);
-      const thigh = capsule(0.085, THIGH - 0.12, look.pants);
-      thigh.position.y = -THIGH / 2;
+      const thigh = capsule(0.095, THIGH - 0.1, look.pants);
+      thigh.position.y = -THIGH / 2 + 0.01;
       hip.add(thigh);
 
       const knee = new THREE.Group();
       knee.position.y = -THIGH;
-      const shin = capsule(0.068, SHIN - 0.1, look.shorts ? look.skin : look.pants);
-      shin.position.y = -SHIN / 2;
+      const shin = capsule(0.078, SHIN - 0.08, look.shorts ? look.skin : look.pants);
+      shin.position.y = -SHIN / 2 + 0.01;
       knee.add(shin);
       if (look.cargo) {
         // Túi hộp bên hông đùi + nắp túi
@@ -179,7 +190,7 @@ export class Humanoid {
         flap.position.set(side * 0.087, -THIGH * 0.6 + 0.075, 0);
         hip.add(flap);
         // Gấu bó ở cổ chân
-        const cuff = mesh(new THREE.CylinderGeometry(0.064, 0.064, 0.05, 12), shade(look.pants, 0.85));
+        const cuff = mesh(new THREE.CylinderGeometry(0.074, 0.074, 0.05, 12), shade(look.pants, 0.85));
         cuff.position.y = -SHIN + 0.05;
         knee.add(cuff);
       }
@@ -187,16 +198,16 @@ export class Humanoid {
       // Giày: thuôn dài về phía trước
       const shoeGeo = new THREE.CapsuleGeometry(0.062, 0.15, 4, 10);
       shoeGeo.rotateX(Math.PI / 2);
-      shoeGeo.scale(1.1, 0.72, 1);
-      const shoe = mesh(shoeGeo, shoeColor, 0.6);
+      shoeGeo.scale(1.25, 0.8, 1.1);
+      const shoe = mesh(shoeGeo, shoeColor);
       shoe.position.set(0, -SHIN - 0.02, 0.05);
       knee.add(shoe);
       if (look.soles !== undefined) {
         // Giày thể thao hai màu: đế dày, mũi giày, vạch hông
         const soleGeo = new THREE.CapsuleGeometry(0.064, 0.16, 4, 10);
         soleGeo.rotateX(Math.PI / 2);
-        soleGeo.scale(1.12, 0.3, 1.02);
-        const sole = mesh(soleGeo, look.soles, 0.7);
+        soleGeo.scale(1.28, 0.34, 1.12);
+        const sole = mesh(soleGeo, look.soles);
         sole.position.set(0, -SHIN - 0.055, 0.05);
         knee.add(sole);
         const toe = sphere(0.05, look.soles, 1.15, 0.6, 0.9);
@@ -225,7 +236,7 @@ export class Humanoid {
     // Thắt lưng
     const beltGeo = new THREE.CylinderGeometry(0.172, 0.172, 0.04, 16);
     beltGeo.scale(build, 1, 0.69);
-    const belt = mesh(beltGeo, 0x2b1d14, 0.5);
+    const belt = mesh(beltGeo, 0x2b1d14);
     belt.position.y = HIP_Y + 0.12;
     this.upper.add(belt);
 
@@ -256,14 +267,14 @@ export class Humanoid {
       this.upper.add(collar);
     }
     // Cổ
-    const neck = mesh(new THREE.CylinderGeometry(0.058, 0.065, 0.14, 12), look.skin);
-    neck.position.y = 1.47;
+    const neck = mesh(new THREE.CylinderGeometry(0.06, 0.068, 0.18, 12), look.skin);
+    neck.position.y = 1.49;
     this.upper.add(neck);
 
     if (look.jacket) this.buildJacket(look.jacket, build);
     if (look.apron) this.buildApron(build);
     if (look.goldChain) {
-      const chain = mesh(new THREE.TorusGeometry(0.09, 0.012, 6, 18), 0xf1c40f, 0.25);
+      const chain = mesh(new THREE.TorusGeometry(0.09, 0.012, 6, 18), 0xf1c40f);
       chain.rotation.x = Math.PI / 2 - 0.5;
       chain.position.set(0, 1.39, 0.05);
       this.upper.add(chain);
@@ -276,7 +287,7 @@ export class Humanoid {
     const gap = j.open ? 0.42 : 0;
     const arc = Math.PI * 2 - gap * 2;
     const open = (m: THREE.Mesh): THREE.Mesh => {
-      (m.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+      (m.material as THREE.Material).side = THREE.DoubleSide;
       this.upper.add(m);
       return m;
     };
@@ -323,7 +334,7 @@ export class Humanoid {
     const apronGeo = new THREE.CylinderGeometry(0.212, 0.2, 0.55, 16, 1, true, -0.85, 1.7);
     apronGeo.scale(build, 1, 0.72);
     const apron = mesh(apronGeo, apronColor);
-    (apron.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+    (apron.material as THREE.Material).side = THREE.DoubleSide;
     apron.position.y = 0.98;
     this.upper.add(apron);
     // Túi trước
@@ -353,14 +364,14 @@ export class Humanoid {
     if (look.jacket) sleeves = 'long';
     const upperColor = sleeves === 'none' ? armSkin : sleeves === 'long' ? top : armSkin;
     // Khối vai: nối tay liền vào thân
-    const deltoid = sphere(0.07, sleeves === 'none' ? armSkin : top, 1, 0.9, 0.9);
+    const deltoid = sphere(0.078, sleeves === 'none' ? armSkin : top, 1, 0.9, 0.9);
     deltoid.position.set(-side * 0.012, -0.01, 0);
     tilt.add(deltoid);
-    const upperArm = capsule(0.058, UPPER_ARM - 0.1, upperColor);
+    const upperArm = capsule(0.064, UPPER_ARM - 0.08, upperColor);
     upperArm.position.y = -UPPER_ARM / 2 + 0.01;
     tilt.add(upperArm);
     if (sleeves === 'short') {
-      const sleeve = mesh(new THREE.CylinderGeometry(0.068, 0.064, 0.13, 12), look.shirt);
+      const sleeve = mesh(new THREE.CylinderGeometry(0.076, 0.072, 0.13, 12), look.shirt);
       sleeve.position.y = -0.055;
       tilt.add(sleeve);
     }
@@ -368,24 +379,24 @@ export class Humanoid {
     const elbow = new THREE.Group();
     elbow.position.y = -UPPER_ARM;
     elbow.rotation.x = ELBOW_REST;
-    const forearm = capsule(0.05, 0.19, sleeves === 'long' ? top : armSkin);
+    const forearm = capsule(0.056, 0.19, sleeves === 'long' ? top : armSkin);
     forearm.position.y = -0.13;
     elbow.add(forearm);
     if (look.jacket) {
       // Mảng màu ở bắp tay + bo tay áo
-      const panel = mesh(new THREE.CylinderGeometry(0.061, 0.061, 0.06, 12), look.jacket.trim);
+      const panel = mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.06, 12), look.jacket.trim);
       panel.position.y = -UPPER_ARM * 0.62;
       tilt.add(panel);
-      const cuff = mesh(new THREE.CylinderGeometry(0.054, 0.052, 0.04, 12), shade(top, 0.75));
+      const cuff = mesh(new THREE.CylinderGeometry(0.06, 0.058, 0.04, 12), shade(top, 0.75));
       cuff.position.y = -0.235;
       elbow.add(cuff);
     }
     // Bàn tay + ngón cái
-    const hand = sphere(0.052, look.skin, 0.75, 1.15, 0.55);
-    hand.position.y = -0.3;
+    const hand = sphere(0.064, look.skin, 0.85, 1.05, 0.7);
+    hand.position.y = -0.305;
     elbow.add(hand);
-    const thumb = capsule(0.018, 0.04, look.skin);
-    thumb.position.set(-side * 0.035, -0.27, 0.025);
+    const thumb = capsule(0.022, 0.04, look.skin);
+    thumb.position.set(-side * 0.045, -0.27, 0.025);
     thumb.rotation.z = -side * 0.5;
     elbow.add(thumb);
     tilt.add(elbow);
@@ -400,8 +411,9 @@ export class Humanoid {
     // Hộp sọ hơi dài + cằm thon
     const skullGeo = new THREE.SphereGeometry(0.14, 20, 16);
     skullGeo.scale(1, 1.15, 1.05);
-    const head = mesh(skullGeo, skin, 0.65);
+    const head = mesh(skullGeo, skin);
     head.position.y = HEAD_Y;
+    head.scale.setScalar(HEAD_SCALE);
     this.upper.add(head);
 
     const jaw = sphere(0.105, skin, 1, 0.8, 1);
@@ -428,11 +440,11 @@ export class Humanoid {
     if (look.sunglasses) {
       const lensMat = 0x050505;
       for (const side of [-1, 1]) {
-        const lens = mesh(new THREE.BoxGeometry(0.075, 0.045, 0.012), lensMat, 0.15);
+        const lens = mesh(new THREE.BoxGeometry(0.075, 0.045, 0.012), lensMat);
         lens.position.set(side * 0.052, 0.022, 0.15);
         head.add(lens);
       }
-      const bridge = mesh(new THREE.BoxGeometry(0.2, 0.012, 0.012), lensMat, 0.15);
+      const bridge = mesh(new THREE.BoxGeometry(0.2, 0.012, 0.012), lensMat);
       bridge.position.set(0, 0.04, 0.15);
       head.add(bridge);
       for (const side of [-1, 1]) {
@@ -469,8 +481,10 @@ export class Humanoid {
       const x = side * 0.05;
       switch (eyes) {
         case 'round':
-          add(sphere(0.027, 0xffffff, 1, 1, 0.6), x, 0.02, 0.127);
-          add(sphere(0.015, iris), x, 0.018, 0.142);
+          // Mắt tròn to + đốm sáng cho "có hồn"
+          add(sphere(0.031, 0xffffff, 1, 1.1, 0.6), x, 0.018, 0.126);
+          add(sphere(0.019, iris, 1, 1.1, 0.6), x, 0.015, 0.139);
+          add(sphere(0.006, 0xffffff), x + 0.008, 0.026, 0.149);
           break;
         case 'anime': {
           // Mắt to dọc, tròng màu, đồng tử, đốm sáng, viền mi trên
@@ -484,8 +498,8 @@ export class Humanoid {
         }
         case 'sleepy':
           // Mí sụp che nửa mắt
-          add(sphere(0.027, 0xffffff, 1, 1, 0.6), x, 0.02, 0.127);
-          add(sphere(0.015, iris), x, 0.012, 0.142);
+          add(sphere(0.031, 0xffffff, 1, 1.1, 0.6), x, 0.018, 0.126);
+          add(sphere(0.019, iris, 1, 1.1, 0.6), x, 0.01, 0.139);
           add(mesh(new THREE.BoxGeometry(0.062, 0.022, 0.03), shade(skin, 0.9)), x, 0.033, 0.135);
           break;
         case 'happy':
@@ -569,7 +583,7 @@ export class Humanoid {
     );
     geo.scale(1, 1.15, 1.05);
     const band = mesh(geo, color);
-    (band.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+    (band.material as THREE.Material).side = THREE.DoubleSide;
     head.add(band);
   }
 
@@ -672,7 +686,7 @@ export class Humanoid {
         const geo = new THREE.SphereGeometry(0.154, 20, 12, Math.PI / 2 + 0.85, Math.PI * 2 - 1.7, 0, 2.1);
         geo.scale(1, 1.15, 1.05);
         const shell = mesh(geo, color);
-        (shell.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+        (shell.material as THREE.Material).side = THREE.DoubleSide;
         head.add(shell);
         add(sphere(0.1, color, 1.35, 0.32, 0.6), 0, 0.12, 0.09);
         break;

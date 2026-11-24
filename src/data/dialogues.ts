@@ -177,7 +177,7 @@ export const DIALOGUES = {
         icon: '🥫',
         name: 'Hết nguyên liệu',
         from: 'Từ ca 8',
-        text: 'Pate, dưa leo, gas có hạn. Thấy "sắp hết" là chạy ra <b>chợ</b> ngoài vỉa hè mua (<kbd>E</kbd>), mang về cất lên kệ bếp.',
+        text: 'Pate, dưa leo, gas có hạn. Thấy "sắp hết" là chạy tới quầy <b>chợ</b> cạnh cửa mua (<kbd>E</kbd>), mang về cất lên kệ bếp.',
       },
       {
         icon: '🌑',
@@ -312,8 +312,8 @@ export const DIALOGUES = {
   ticketShipper: '🛵 Shipper (ƯU TIÊN)',
 
   // --- Hết nguyên liệu (ca 8+) ---
-  toastSupplyLow: '⚠️ {item} sắp hết (còn {n})! Nhớ ra chợ đầu phố mua.',
-  toastSupplyOut: '🚫 HẾT {item}! Chạy ra chợ đầu phố mua!',
+  toastSupplyLow: '⚠️ {item} sắp hết (còn {n})! Nhớ ra quầy chợ cạnh cửa mua.',
+  toastSupplyOut: '🚫 HẾT {item}! Chạy ra quầy chợ cạnh cửa mua!',
   toastSupplyBought: '🛍️ Mua được {item}. Mang về cất lên kệ bếp!',
   toastSupplyStocked: '📦 Đã cất {item} lên kệ.',
   actionBuy: '🛍️ Mua {item} ở chợ',
@@ -424,7 +424,7 @@ export const DIALOGUES = {
     5: 'Giang hồ! Đạp cửa vào, không gọi món. Lấy MENU ở kệ tím cạnh cửa mang tới trong 20 giây. Chậm = nhập viện.',
     6: 'Chảo bốc cháy! Nướng xong mà bỏ quên là khói đen bốc lên. Chạy về bếp đậy NẮP VUNG (E). Tạt nước vào dầu là bùng cháy. Cháy lan = cháy quán.',
     7: 'Shipper giục đơn! Nghe còi bíp bíp là có đơn ƯU TIÊN. Làm xong mang ra đưa shipper ở cửa trước khi ổng chửi trên app.',
-    8: 'Hết nguyên liệu! Pate, dưa leo, gas có hạn. Thấy "sắp hết" thì chạy ra chợ ngoài vỉa hè mua, mang về cất lên kệ bếp.',
+    8: 'Hết nguyên liệu! Pate, dưa leo, gas có hạn. Thấy "sắp hết" thì chạy tới quầy chợ cạnh cửa mua, mang về cất lên kệ bếp.',
     9: 'Mất điện! Đèn chớp là sắp tắt. Ra máy phát GIỮ E để nổ máy, hoặc thắp nến cho đỡ tối. Mất điện bếp không chạy.',
     10: 'Thanh tra vệ sinh! Thấy xe lạ đỗ trước quán thì lau hết chỗ bẩn 🧽 trước khi ổng vào. Còn bẩn là bị phạt tiền.',
   },

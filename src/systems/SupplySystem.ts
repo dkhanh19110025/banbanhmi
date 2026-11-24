@@ -21,8 +21,8 @@ export interface SupplyDeps {
 /**
  * Sự cố — Hết nguyên liệu (từ ca 8).
  * Kích hoạt: mỗi lần nướng tốn nguyên liệu (pate, dưa leo, gas); kho có hạn nên dùng riết sẽ cạn.
- * Dấu hiệu: thông báo "sắp hết" khi còn ít, nhãn cảnh báo trên kệ bếp, nhãn 🛍️ Chợ ngoài vỉa hè.
- * Khắc phục: chạy ra chợ ngoài vỉa hè mua (E), ôm túi về cất lên kệ bếp (E). Món khác vẫn làm được trong lúc chờ.
+ * Dấu hiệu: thông báo "sắp hết" khi còn ít, nhãn cảnh báo trên kệ bếp, nhãn 🛍️ Chợ ở quầy cạnh cửa.
+ * Khắc phục: chạy tới quầy chợ cạnh cửa mua (E), ôm túi về cất lên kệ bếp (E). Món khác vẫn làm được trong lúc chờ.
  * Hậu quả: hết mà không mua → món cần nguyên liệu đó không làm được, khách chờ cáu rồi bỏ về, chủ quán bực.
  */
 export class SupplySystem {
@@ -43,7 +43,7 @@ export class SupplySystem {
 
     this.offs.push(
       bus.on('kitchen:cookStarted', (c) => this.consume(c.dish)),
-      // Chợ ngoài vỉa hè: mua thứ đang thiếu nhất
+      // Quầy chợ cạnh cửa: mua thứ đang thiếu nhất
       interaction.register({
         position: () => restaurant.marketPoint,
         range: cfg.interactRange + 0.5,

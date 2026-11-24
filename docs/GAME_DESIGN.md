@@ -268,7 +268,7 @@ SLEEPING → (catSleep thấp) WAKING_UP → WANDERING → (bị bế đi bởi 
 |---|---|---|---|
 | Khách đổi ý sau khi bánh làm xong | Khách vẫy tay gọi lại | Gỡ hành/làm lại | Chậm, trừ điểm |
 | Khách đòi giảm giá | Bong bóng "Quen mà!" | Chiều hoặc từ chối | Chiều → trừ lương; từ chối → rating giảm |
-| ✅ Hết nguyên liệu (pate, dưa leo, gas) — ca 8 | Icon cạn trên kệ, thông báo sắp hết | Chạy ra chợ vỉa hè mua, cất lên kệ bếp | Món cần nguyên liệu đó không làm được, khách chờ cáu |
+| ✅ Hết nguyên liệu (pate, dưa leo, gas) — ca 8 | Icon cạn trên kệ, thông báo sắp hết | Chạy tới quầy chợ trong quán (cạnh cửa) mua, cất lên kệ bếp | Món cần nguyên liệu đó không làm được, khách chờ cáu |
 | ✅ Chảo bốc cháy — ca 6 | Khói đen, tiếng dầu xèo, thông báo | Lấy **bình cứu hỏa** ở kệ bếp, xịt vào bếp (E), rồi **cất bình lại** (không cất mà chủ quán thấy → ăn tát, chỉ tát). Tạt nước thì bùng to + trừ lương | Cháy lan = **cháy quán** (kết thúc ca, chơi lại) |
 | Bánh nướng quá lửa | Tiếng "xèo" đổi, mùi khét | Lấy ra đúng lúc | Bánh hỏng, mất khách |
 | Chuột/gián trong bếp | Bóng chạy qua, tiếng kêu | Đuổi/đập | Thanh tra thấy → phạt nặng |

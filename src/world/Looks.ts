@@ -48,7 +48,7 @@ export const GANG_LOOKS: readonly HumanoidLook[] = [
 
 // ---------- Khách ngẫu nhiên, không trùng ----------
 
-const SKINS = [0xf3d2b3, 0xf1c7a1, 0xe0ac69, 0xc68642, 0x8d5524];
+const SKINS = [0xf6dcc4, 0xf1c7a1, 0xdcae84, 0xb98257, 0x8a5a3c];
 const HAIR_STYLES: readonly HairStyle[] = ['short', 'spiky', 'bun', 'long', 'ponytail', 'anime', 'buzz', 'curly', 'bob', 'sidepart', 'mohawk'];
 const HAIR_COLORS = [0x1b1b1b, 0x3b2314, 0x6b3e1e, 0xc9a227, 0xb03a2e, 0x7f8c8d, 0xe8e2d0, 0x5b4a8a];
 const TOP_COLORS = [0xe84393, 0x00b894, 0xfdcb6e, 0x6c5ce7, 0xe17055, 0x0984e3, 0x2d3436, 0xffffff, 0x81ecec, 0xa29bfe, 0xfab1a0, 0x55efc4];
